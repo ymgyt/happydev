@@ -1,5 +1,6 @@
 [workspace]
 
 members = [
-    "happydev-ci"
+    "happydev-ci",
+    "todo"
 ]
