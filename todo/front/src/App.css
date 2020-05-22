@@ -1,0 +1,13 @@
+body {
+    font-family: "Roboto";
+}
+
+.Container {
+    background-color: #eeeeee;
+}
+
+.Task {
+    margin-bottom: 10px;
+    border: solid 1px #cccccc;
+    width: 100%;
+}
