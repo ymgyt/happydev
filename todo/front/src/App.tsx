@@ -20,10 +20,10 @@ const App = () => {
   const [tasks, setTasks] = useState<TaskProps[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect( () => {
+  useEffect(() => {
     console.log("initialize app...", Config);
     getTasks();
-  },[])
+  }, [])
 
 
   const getTasks = async () => {

@@ -21,22 +21,22 @@ export interface TaskProps {
   onCheckBoxToggle?: any,
 }
 
-const Task:React.FC<any> = (props: TaskProps) => {
-    return (
-      <ListItem divider={props.divider}>
-        <Checkbox
-          onClick={props.onCheckBoxToggle}
-          checked={props.checked}
-          disableRipple={false}
-        />
-        <ListItemText primary={props.title} />
-        <ListItemSecondaryAction>
-          <IconButton aria-label='Delete Todo' onClick={props.onButtonClick}>
-            <DeleteOutlined />
-          </IconButton>
-        </ListItemSecondaryAction>
-      </ListItem>
-    )
+const Task: React.FC<any> = (props: TaskProps) => {
+  return (
+    <ListItem divider={props.divider}>
+      <Checkbox
+        onClick={props.onCheckBoxToggle}
+        checked={props.checked}
+        disableRipple={false}
+      />
+      <ListItemText primary={props.title}/>
+      <ListItemSecondaryAction>
+        <IconButton aria-label='Delete Todo' onClick={props.onButtonClick}>
+          <DeleteOutlined/>
+        </IconButton>
+      </ListItemSecondaryAction>
+    </ListItem>
+  )
 }
 
 export default Task;

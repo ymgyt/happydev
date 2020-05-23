@@ -18,7 +18,7 @@ const Tasks: React.FC<TasksProps> = ({tasks, loading}) => {
   return (
     <Paper style={{margin: 16}}>
       <List style={{overflow: 'scroll', padding: 0}}>
-        {tasks.map(task=>
+        {tasks.map(task =>
           <Task
             key={task.id}
             {...task}
