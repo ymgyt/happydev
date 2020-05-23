@@ -1,18 +1,30 @@
 import React from 'react';
 import Task, {TaskProps} from './Task';
+import AddTodo from "./AddTask";
+import {List, Paper, Grid} from '@material-ui/core';
 
 export interface TasksProps {
-    tasks: TaskProps[]
+  tasks: TaskProps[]
 }
 
-const Tasks = (props: TasksProps) => {
-    return (
-        <div className='Tasks'>
-            {props.tasks.map(task =>
-                <Task key={task.id} id={task.id} title={task.title} content={task.content}/>
-            )}
-        </div>
-    )
+const Tasks: React.FC<TasksProps> = ({tasks}) => {
+  const handleClick = (event: any) => {
+    console.log('Add task requested!');
+  }
+  return (
+    <Paper style={{margin: 16}}>
+      <List style={{overflow: 'scroll', padding: 0}}>
+        {tasks.map(task=>
+          <Task
+            key={task.id}
+            {...task}
+            divider={true}
+          />
+        )}
+        <AddTodo/>
+      </List>
+    </Paper>
+  )
 }
 
 export default Tasks;

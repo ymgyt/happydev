@@ -1,31 +1,28 @@
-import React, {Fragment, useState} from 'react';
-import Tasks from './components/tasks/Tasks';
-import {Button, Container} from '@material-ui/core';
+import React, {useState} from 'react';
+import Tasks, {TasksProps} from './components/tasks/Tasks';
+import Layout from "./components/layout/Layout";
 import './App.css';
 import CssBaseline from '@material-ui/core/CssBaseline';
 
 
-function App() {
-    const [name, setName] = useState<string | null>('ymgyt');
+const App = () => {
+  const initialTasks: TasksProps = {
+    tasks: [
+      {id: 1, title: 'task 1', content: "aaa"},
+      {id: 2, title: 'task 2', content: "aaa"},
+      {id: 3, title: 'task 3', content: "aaa"},
+      {id: 4, title: 'task 4', content: "aaa"},
+    ]
+  };
 
-    const tasks = [
-        {id: 1, title: 'task 1', content: "aaa"},
-        {id: 2, title: 'task 2', content: "aaa"},
-        {id: 3, title: 'task 3', content: "aaa"},
-        {id: 4, title: 'task 4', content: "aaa"},
-    ];
+  const [tasks, setTask] = useState(initialTasks);
 
-    return (
-        <Fragment>
-            <CssBaseline/>
-            <Container className='Container'>
-                <Tasks tasks={tasks}/>
-                <Button variant="contained" color="primary">
-                    Push Me
-                </Button>
-            </Container>
-        </Fragment>
-    );
+  return (
+      <Layout>
+        <CssBaseline/>
+        <Tasks {...tasks}/>
+      </Layout>
+  );
 }
 
 export default App;
