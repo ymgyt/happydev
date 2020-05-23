@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import Tasks, {TasksProps} from './components/tasks/Tasks';
+import Config from "./Config";
 import Layout from "./components/layout/Layout";
 import CssBaseline from '@material-ui/core/CssBaseline';
 import {makeStyles} from '@material-ui/styles';
@@ -14,7 +15,7 @@ const useStyles = makeStyles((theme) => ({
 const App = () => {
   const classes = useStyles();
   useEffect(() => {
-    console.log("initialize app...");
+    console.log("initialize app...", Config);
   })
 
   const initialTasks: TasksProps = {
@@ -26,7 +27,13 @@ const App = () => {
     ]
   };
 
-  const [tasks, setTask] = useState(initialTasks);
+  const [tasks, setTasks] = useState(initialTasks);
+  const [loading, setLoading] = useState(false);
+
+  const getTasks = async () => {
+    setLoading(true);
+    const res = await fetch('/logs')
+  }
 
   return (
     <div className={classes.app}>
