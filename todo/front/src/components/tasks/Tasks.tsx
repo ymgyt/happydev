@@ -1,7 +1,7 @@
 import React from 'react';
 import Task, {TaskProps} from './Task';
 import AddTodo from "./AddTask";
-import {List, Paper, Grid} from '@material-ui/core';
+import {List, Paper} from '@material-ui/core';
 
 export interface TasksProps {
   tasks: TaskProps[]
