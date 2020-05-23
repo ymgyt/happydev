@@ -1,7 +1,7 @@
 import React from 'react';
 import {TextField, Paper, Button, Grid} from '@material-ui/core';
 
-const AddTodo = (props: any) => {
+const AddTask = (props: any) => {
   return (
     <Paper style={{margin: 0, padding: 10}}>
       <Grid container justify='flex-end'>
@@ -29,4 +29,4 @@ const AddTodo = (props: any) => {
   )
 };
 
-export default AddTodo;
+export default AddTask;

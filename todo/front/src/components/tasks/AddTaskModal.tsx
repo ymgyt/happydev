@@ -3,6 +3,7 @@ import { makeStyles, Theme, createStyles } from '@material-ui/core/styles';
 import Modal from '@material-ui/core/Modal';
 import Backdrop from '@material-ui/core/Backdrop';
 import Fade from '@material-ui/core/Fade';
+import AddTaskForm from "./AddTaskForm";
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -47,8 +48,7 @@ const AddTaskModal = (props:AddTaskModalProps) => {
       >
         <Fade in={props.open}>
           <div className={classes.paper}>
-            <h2 id="transition-modal-title">Add Task</h2>
-            <p id="transition-modal-description">react-transition-group animates me.</p>
+            <AddTaskForm />
           </div>
         </Fade>
       </Modal>

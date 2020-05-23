@@ -53,7 +53,7 @@ const Layout = (props: any) => {
               <SearchIcon/>
             </div>
             <InputBase
-              placeholder='...'
+              placeholder='Search Tasks'
               classes={{
                 root: classes.inputRoot,
                 input: classes.inputInput,

@@ -1,6 +1,6 @@
 import React from 'react';
 import Task, {TaskProps} from './Task';
-import AddTodo from "./AddTask";
+import AddTask from "./AddTask";
 import AddTaskModal from "./AddTaskModal";
 import {List, Paper} from '@material-ui/core';
 
@@ -10,9 +10,9 @@ export interface TasksProps {
 }
 
 const Tasks: React.FC<TasksProps> = ({tasks, loading}) => {
-  const [openModal, setOpenModal] = React.useState<boolean>(false);
+  const [openModal, setOpenModal] = React.useState<boolean>(true);
 
-  const handleClick = (event: any) => {
+  const handleAddTaskClick = (event: any) => {
     console.log('Add task requested!');
     setOpenModal(true);
   }
@@ -37,8 +37,8 @@ const Tasks: React.FC<TasksProps> = ({tasks, loading}) => {
           )}
         </List>
       )}
-      <AddTodo onButtonClick={handleClick}/>
-     <AddTaskModal open={openModal} onClose={handleModalClosed}/>
+      <AddTask onButtonClick={handleAddTaskClick}/>
+      <AddTaskModal open={openModal} onClose={handleModalClosed}/>
     </Paper>
   )
 }
