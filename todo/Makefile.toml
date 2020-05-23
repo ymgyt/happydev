@@ -1,10 +1,29 @@
 [tasks.deploy_front]
+env = {"REACT_APP_TODO_API_URL" = "localhost:4002"}
 script = [
-  "cd front && npm run build",
-  "aws s3 sync front/build/ s3://todo.ymgyt.io/"
+  "cd front",
+  "env | grep REACT_APP_",
+  "npm run build",
+  "aws s3 sync build/ s3://todo.ymgyt.io/"
 ]
 
+[tasks.run_front]
+script = ["cd front && yarn start"]
+
 [tasks.echo]
+env = {"REACT_APP_TODO_API_URL" = "localhost:4002"}
 script = [
-	"echo OK"
+    "echo ${REACT_APP_TODO_API_URL}"
 ]
+
+[tasks.never]
+condition_script = [
+    "exit 1"
+]
+script = ["echo never executed"]
+
+[env]
+ENV_XXX = "XXX"
+
+# 実行時にわたすこともできる
+# cargo make --env ENV1=VALUE1 --env ENV2=VALUE2
