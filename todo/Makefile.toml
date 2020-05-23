@@ -1,0 +1,10 @@
+[tasks.deploy_front]
+script = [
+  "cd front && npm run build",
+  "aws s3 sync front/build/ s3://todo.ymgyt.io/"
+]
+
+[tasks.echo]
+script = [
+	"echo OK"
+]
