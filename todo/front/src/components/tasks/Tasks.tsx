@@ -5,11 +5,15 @@ import {List, Paper} from '@material-ui/core';
 
 export interface TasksProps {
   tasks: TaskProps[]
+  loading: boolean,
 }
 
-const Tasks: React.FC<TasksProps> = ({tasks}) => {
+const Tasks: React.FC<TasksProps> = ({tasks, loading}) => {
   const handleClick = (event: any) => {
     console.log('Add task requested!');
+  }
+  if (loading) {
+    return <h4>Loading...</h4>
   }
   return (
     <Paper style={{margin: 16}}>

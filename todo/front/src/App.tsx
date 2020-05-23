@@ -1,6 +1,8 @@
 import React, {useState, useEffect} from 'react';
 import Tasks, {TasksProps} from './components/tasks/Tasks';
+import {TaskProps} from './components/tasks/Task';
 import Config from "./Config";
+import TodoApi from "./components/gateway/todoApi";
 import Layout from "./components/layout/Layout";
 import CssBaseline from '@material-ui/core/CssBaseline';
 import {makeStyles} from '@material-ui/styles';
@@ -14,32 +16,29 @@ const useStyles = makeStyles((theme) => ({
 
 const App = () => {
   const classes = useStyles();
-  useEffect(() => {
-    console.log("initialize app...", Config);
-  })
 
-  const initialTasks: TasksProps = {
-    tasks: [
-      {id: 1, title: 'task 1', content: "aaa"},
-      {id: 2, title: 'task 2', content: "aaa"},
-      {id: 3, title: 'task 3', content: "aaa"},
-      {id: 4, title: 'task 4', content: "aaa"},
-    ]
-  };
-
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, setTasks] = useState<TaskProps[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect( () => {
+    console.log("initialize app...", Config);
+    getTasks();
+  },[])
+
 
   const getTasks = async () => {
     setLoading(true);
-    const res = await fetch('/logs')
+    const res = await TodoApi.GET('/tasks');
+    console.log("got tasks", res);
+    setTasks(res.tasks);
+    setLoading(false);
   }
 
   return (
     <div className={classes.app}>
       <Layout>
         <CssBaseline/>
-        <Tasks {...tasks}/>
+        <Tasks tasks={tasks} loading={loading}/>
       </Layout>
     </div>
   );
