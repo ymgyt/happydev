@@ -1,7 +1,7 @@
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
 use std::net::SocketAddr;
-use todo::{config, router};
+use todo::{config, router, state};
 use tracing::{error, info};
 
 async fn shutdown_signal() {
@@ -24,9 +24,18 @@ async fn main() {
 
     let addr = SocketAddr::from(([0, 0, 0, 0], config::port()));
 
+    let state = state::State::shared();
+
     let server = Server::bind(&addr)
-        .serve(make_service_fn(|_| async {
-            Ok::<_, std::convert::Infallible>(service_fn(router::service))
+        .serve(make_service_fn(move |_| {
+            let state = state.clone();
+
+            async move {
+                Ok::<_, std::convert::Infallible>(service_fn(move |req| {
+                    let state = state.clone();
+                    router::service(state, req)
+                }))
+            }
         }))
         .with_graceful_shutdown(shutdown_signal());
 

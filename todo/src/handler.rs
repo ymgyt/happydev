@@ -1,4 +1,9 @@
 use hyper::{Body, Request, Response, StatusCode};
+use crate::{
+    state,
+    domain::entity,
+};
+use serde::Serialize;
 
 pub fn not_found() -> Result<Response<Body>, hyper::Error> {
     let mut not_found = Response::default();
@@ -10,21 +15,25 @@ pub fn healthz() -> Result<Response<Body>, hyper::Error> {
     Ok(Response::new(Body::from("OK")))
 }
 
-pub struct TaskHandler {}
+
+pub struct TaskHandler {
+}
+
+
+#[derive(Serialize)]
+pub struct GetTasksResponse<'a> {
+    tasks: &'a Vec<entity::task::Task>,
+}
 
 impl TaskHandler {
     pub fn new() -> Self {
-        TaskHandler {}
+        Self{}
     }
 
-    pub fn get_tasks(&self, _req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
+    pub fn get_tasks(&self, _req: Request<Body>, tasks: &state::Tasks) -> Result<Response<Body>, hyper::Error> {
+       let response = GetTasksResponse{ tasks};
+
         Ok(Response::new(Body::from(
-            r#"{"tasks":[
-            {"id": "A1", "title": "task 1", "category": "/xxx/yyy", "content": "content ..."},
-            {"id": "A2", "title": "task 2", "category": "/xxx/yyy", "content": "content ..."},
-            {"id": "A3", "title": "task 3", "category": "/xxx/yyy", "content": "content ..."},
-            {"id": "A4", "title": "task 4", "category": "/xxx/yyy", "content": "content ..."}
-        ]}"#,
-        )))
+            serde_json::to_vec(&response).expect("Serialize tasks"))))
     }
 }
