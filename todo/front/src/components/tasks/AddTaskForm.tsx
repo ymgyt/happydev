@@ -6,22 +6,45 @@ import Button from "@material-ui/core/Button";
 import TextField from "@material-ui/core/TextField";
 
 const useStyles = makeStyles((theme: Theme) =>
-  createStyles({}),
+  createStyles({
+    input: {
+      width: '50%',
+    }
+  }),
 );
 
 
 const AddTaskForm = () => {
-  const clases = useStyles()
+  const classes = useStyles()
+
+  const [title, setTitle] = React.useState<string|undefined>("");
+  const [category, setCategory] = React.useState<string|undefined>("")
+  const [content, setContent] = React.useState<string|undefined>("");
+
+  const handle = () => {
+    console.log("save clicked", title, content);
+  }
 
   return (
     <Grid container direction='column'>
       <Grid item>
-        <Typography variant='h4' style={{lineHeight: 2}}>Add Task</Typography>
+        <Typography variant='h5' style={{lineHeight: 2}}>Enter Task</Typography>
       </Grid>
       <Grid item>
         <TextField
           label='Title' id='title'
-          style={{width: '50%'}}
+          className={classes.input}
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+        />
+      </Grid>
+      <Grid item>
+        <TextField
+          label='Category' id='category'
+          className={classes.input}
+          margin='normal'
+          value={category}
+          onChange={(event)=> setCategory(event.target.value)}
         />
       </Grid>
       <Grid item>
@@ -31,8 +54,23 @@ const AddTaskForm = () => {
           rows={10}
           fullWidth
           margin='normal'
+          value={content}
+          onChange={(event)=> setContent(event.target.value)}
         />
       </Grid>
+     <Grid item container justify='flex-end'>
+       <Grid item md={2}>
+         <Button
+           style={{marginTop: '10px'}}
+           color='primary'
+           variant='outlined'
+           fullWidth
+           onClick={handle}
+         >
+           Save
+         </Button>
+       </Grid>
+     </Grid>
     </Grid>
 )
 }

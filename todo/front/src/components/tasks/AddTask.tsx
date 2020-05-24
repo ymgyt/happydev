@@ -17,7 +17,7 @@ const AddTask = (props: any) => {
         <Grid md={2} item>
           <Button
             fullWidth
-            color='secondary'
+            color='primary'
             variant='outlined'
             onClick={props.onButtonClick}
           >
