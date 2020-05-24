@@ -74,7 +74,7 @@ const Layout = (props: any) => {
       <Box>
         <Typography variant="body2" color="textSecondary" align="right" style={{marginRight: '16px'}}>
           <Link color="inherit" href='https://github.com/ymgyt/happydev/tree/master/todo'>
-            <SvgIcon><GithubLogo /></SvgIcon>
+            <SvgIcon style={{display: 'inline-block', textAlign: 'center'}}><GithubLogo /></SvgIcon>
           </Link>
         </Typography>
       </Box>
