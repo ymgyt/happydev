@@ -27,7 +27,8 @@ pub mod config {
 
 pub mod state {
     use crate::domain::{entity::task, vo};
-    use std::sync::{Arc, RwLock};
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
 
     // app state
     pub type SharedState = Arc<RwLock<State>>;
@@ -129,7 +130,7 @@ pub mod router {
                 let task_handler = handler::TaskHandler::new();
                 match *method {
                     Method::GET => {
-                        let state = state.read().unwrap();
+                        let state = state.read().await;
                         task_handler.get_tasks(req, &state.tasks)
                     }
                     _ => handler::not_found(),
