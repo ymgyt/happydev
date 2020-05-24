@@ -10,7 +10,7 @@ import DeleteOutlined from '@material-ui/icons/DeleteOutlined';
 
 export interface TaskProps {
   // data
-  id: number,
+  id: string,
   title: string,
   category: string,
   content: string,
