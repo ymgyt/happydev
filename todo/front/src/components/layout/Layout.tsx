@@ -1,8 +1,10 @@
 import React from 'react';
-import {AppBar, Toolbar, Typography, Paper} from '@material-ui/core';
+import {AppBar, Toolbar, Typography, Paper, Box, Link} from '@material-ui/core';
 import {fade, makeStyles} from '@material-ui/core/styles';
 import SearchIcon from '@material-ui/icons/Search';
 import InputBase from "@material-ui/core/InputBase";
+import {ReactComponent as GithubLogo} from '../../assets/github-brands.svg';
+import SvgIcon from '@material-ui/core/SvgIcon';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -69,6 +71,13 @@ const Layout = (props: any) => {
         </Toolbar>
       </AppBar>
       {props.children}
+      <Box>
+        <Typography variant="body2" color="textSecondary" align="right" style={{marginRight: '16px'}}>
+          <Link color="inherit" href='https://github.com/ymgyt/happydev/tree/master/todo'>
+            <SvgIcon><GithubLogo /></SvgIcon>
+          </Link>
+        </Typography>
+      </Box>
     </Paper>
   )
 };
