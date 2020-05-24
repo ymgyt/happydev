@@ -1,6 +1,12 @@
+# 実行時にわたすこともできる
+# cargo make --env ENV1=VALUE1 --env ENV2=VALUE2
+[env]
+TODO_FRONT_VERSION = "v0.0.2"
+REACT_APP_VERSION = "v0.0.2"
+REACT_APP_TODO_API_URL = "https://api-todo.ymgyt.io"
+
 # frontend
 [tasks.deploy_front]
-env = {"REACT_APP_TODO_API_URL" = "localhost:4002"}
 script = [
   "cd front",
   "env | grep REACT_APP_",
@@ -35,6 +41,9 @@ dependencies = [
     "docker_push"
 ]
 
+[tasks.run_server]
+script = ["TODO_PORT=4001 cargo run"]
+
 [tasks.echo]
 env = {"REACT_APP_TODO_API_URL" = "localhost:4002"}
 script = [
@@ -48,9 +57,4 @@ condition_script = [
 ]
 script = ["echo never executed"]
 
-# 実行時にわたすこともできる
-# cargo make --env ENV1=VALUE1 --env ENV2=VALUE2
-[env]
-TODO_FRONT_VERSION = "v0.0.1"
-# backはCARGO_PKG_VERSIONを利用する
 
