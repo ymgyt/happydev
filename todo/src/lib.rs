@@ -90,6 +90,9 @@ pub mod router {
                     _ => handler::not_found(),
                 }
             }
+            _healthz if path.starts_with("/healthz") => {
+               handler::healthz()
+            }
             _ => handler::not_found(),
         }
     }

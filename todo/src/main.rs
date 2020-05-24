@@ -22,7 +22,7 @@ fn init_logger() {
 async fn main() {
     init_logger();
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], config::port()));
+    let addr = SocketAddr::from(([0, 0, 0, 0], config::port()));
 
     let server = Server::bind(&addr)
         .serve(make_service_fn(|_| async {

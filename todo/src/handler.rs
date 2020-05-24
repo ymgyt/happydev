@@ -6,6 +6,10 @@ pub fn not_found() -> Result<Response<Body>, hyper::Error> {
     Ok(not_found)
 }
 
+pub fn healthz() -> Result<Response<Body>, hyper::Error> {
+    Ok(Response::new(Body::from("OK")))
+}
+
 pub struct TaskHandler {}
 
 impl TaskHandler {

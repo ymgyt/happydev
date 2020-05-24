@@ -1,3 +1,4 @@
+# frontend
 [tasks.deploy_front]
 env = {"REACT_APP_TODO_API_URL" = "localhost:4002"}
 script = [
@@ -10,10 +11,35 @@ script = [
 [tasks.run_front]
 script = ["cd front && yarn start"]
 
+# backend
+[tasks.docker_build]
+command = "docker"
+args = ["build", "--tag", "todo", "."]
+
+[tasks.docker_tag]
+script = [
+    "docker tag todo ymgyt/todo:${CARGO_MAKE_CRATE_VERSION:? required}",
+    "docker tag todo ymgyt/todo:latest",
+    "docker image ls --filter 'reference=ymgyt/todo'"
+]
+
+[tasks.docker_push]
+script = [
+    "docker push ymgyt/todo:${CARGO_MAKE_CRATE_VERSION:? required}"
+]
+
+[tasks.docker_flow]
+dependencies = [
+    "docker_build",
+    "docker_tag",
+    "docker_push"
+]
+
 [tasks.echo]
 env = {"REACT_APP_TODO_API_URL" = "localhost:4002"}
 script = [
-    "echo ${REACT_APP_TODO_API_URL}"
+    "echo ${REACT_APP_TODO_API_URL}",
+    "env | grep CARGO_ | grep VERSION"
 ]
 
 [tasks.never]
@@ -22,8 +48,9 @@ condition_script = [
 ]
 script = ["echo never executed"]
 
-[env]
-ENV_XXX = "XXX"
-
 # 実行時にわたすこともできる
 # cargo make --env ENV1=VALUE1 --env ENV2=VALUE2
+[env]
+TODO_FRONT_VERSION = "v0.0.1"
+# backはCARGO_PKG_VERSIONを利用する
+
