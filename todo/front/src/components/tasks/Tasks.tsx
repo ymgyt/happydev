@@ -1,16 +1,28 @@
-import React from 'react';
+import React, {useEffect} from 'react';
+import {connect} from 'react-redux';
 import Task, {TaskProps} from './Task';
 import AddTask from "./AddTask";
 import AddTaskModal from "./AddTaskModal";
 import {List, Paper} from '@material-ui/core';
+import {fetchTasks} from '../../actions/taskAction';
 
 export interface TasksProps {
-  tasks: TaskProps[]
-  loading: boolean,
+  taskState: {
+    tasks: TaskProps[]
+    loading: boolean,
+  }
+  fetchTasks: any,
 }
 
-const Tasks: React.FC<TasksProps> = ({tasks, loading}) => {
-  const [openModal, setOpenModal] = React.useState<boolean>(true);
+const Tasks: any = (props:TasksProps) => {
+  const {taskState: {tasks, loading}, fetchTasks } = props;
+
+  const [openModal, setOpenModal] = React.useState<boolean>(false);
+
+  useEffect(() => {
+    fetchTasks();
+    // eslint-disable-next-line
+  }, []);
 
   const handleAddTaskClick = (event: any) => {
     console.log('Add task requested!');
@@ -21,7 +33,7 @@ const Tasks: React.FC<TasksProps> = ({tasks, loading}) => {
     console.log('Close Modal');
     setOpenModal(false);
   }
-  if (loading) {
+  if (loading || tasks === null) {
     return <h4>Loading...</h4>
   }
   return (
@@ -43,4 +55,11 @@ const Tasks: React.FC<TasksProps> = ({tasks, loading}) => {
   )
 }
 
-export default Tasks;
+const mapStateToProps = (state: any) => ({
+  taskState: state.task
+});
+
+export default connect(
+  mapStateToProps,
+  {fetchTasks}
+)(Tasks);

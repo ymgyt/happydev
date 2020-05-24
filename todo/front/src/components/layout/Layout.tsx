@@ -5,6 +5,12 @@ import SearchIcon from '@material-ui/icons/Search';
 import InputBase from "@material-ui/core/InputBase";
 
 const useStyles = makeStyles((theme) => ({
+  paper: {
+    padding:0,
+    margin:0,
+    backgroundColor: '#fafafa',
+    fontFamily: 'Roboto',
+  },
   search: {
     position: 'relative',
     borderRadius: '4px',
@@ -43,7 +49,7 @@ const Layout = (props: any) => {
     <Paper
       elevation={0}
       variant='elevation'
-      style={{padding: 0, margin: 0, backgroundColor: '#fafafa'}}
+      className={classes.paper}
     >
       <AppBar color='primary' position='static' style={{height: 64}}>
         <Toolbar style={{height: 64}}>

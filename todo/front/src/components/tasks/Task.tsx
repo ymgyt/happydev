@@ -12,6 +12,7 @@ export interface TaskProps {
   // data
   id: number,
   title: string,
+  category: string,
   content: string,
 
   // ui
