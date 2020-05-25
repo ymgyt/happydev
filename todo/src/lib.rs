@@ -36,6 +36,7 @@ pub mod state {
     // in memory tasks
     pub type Tasks = Vec<task::Task>;
 
+    #[derive(Default)]
     pub struct State {
         pub tasks: RwLock<Tasks>,
     }
@@ -147,6 +148,10 @@ pub mod router {
                     Method::POST => {
                         let mut tasks = state.tasks.write().await;
                         task_handler.create_task(req, &mut tasks).await
+                    }
+                    Method::DELETE => {
+                        let mut tasks = state.tasks.write().await;
+                        task_handler.delete_task(req, &mut tasks)
                     }
                     _ => handler::not_found(),
                 }

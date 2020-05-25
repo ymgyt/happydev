@@ -1,4 +1,8 @@
-use crate::{domain::entity, prelude::*, state};
+use crate::{
+    domain::{entity, vo},
+    prelude::*,
+    state,
+};
 use hyper::body::Buf;
 use hyper::{Body, Request, Response, StatusCode};
 use serde::Serialize;
@@ -17,7 +21,7 @@ pub struct TaskHandler {}
 
 #[derive(Serialize)]
 pub struct GetTasksResponse<'a> {
-    tasks: &'a [entity::task::Task]
+    tasks: &'a [entity::task::Task],
 }
 
 impl TaskHandler {
@@ -58,5 +62,30 @@ impl TaskHandler {
                 Ok(Response::new(Body::from(serialized)))
             })
             .map_err(anyhow::Error::from)
+    }
+
+    // taskの削除
+    pub fn delete_task(
+        &self,
+        req: Request<Body>,
+        tasks: &mut state::Tasks,
+    ) -> Result<Response<Body>, anyhow::Error> {
+        // tasks/{uuid} というpathを想定
+        req.uri()
+            .path()
+            .split('/')
+            .nth(2)
+            .ok_or_else(|| anyhow::anyhow!("task id not found in path"))
+            .and_then(|task_id: &str| task_id.parse::<vo::TaskId>())
+            .map(|delete_id| {
+                info!("Delete task: {:?}", delete_id);
+                tasks.retain(|task| task.id().ne(&delete_id))
+            })
+            .and_then(|_| {
+                Response::builder()
+                    .status(StatusCode::NO_CONTENT)
+                    .body(Body::empty())
+                    .map_err(anyhow::Error::from)
+            })
     }
 }

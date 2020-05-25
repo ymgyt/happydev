@@ -36,6 +36,7 @@ pub mod entity {
 
 pub mod vo {
     use serde::{Deserialize, Serialize};
+    use std::{fmt, str};
     use uuid::Uuid;
 
     #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, Serialize, Deserialize)]
@@ -46,10 +47,24 @@ pub mod vo {
             Self(Uuid::new_v4())
         }
     }
+
     // clippyに怒られたので定義しておく
     impl Default for TaskId {
         fn default() -> Self {
             TaskId::new()
+        }
+    }
+
+    impl fmt::Display for TaskId {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+
+    impl str::FromStr for TaskId {
+        type Err = anyhow::Error;
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            Uuid::from_str(s).map(TaskId).map_err(anyhow::Error::from)
         }
     }
 
