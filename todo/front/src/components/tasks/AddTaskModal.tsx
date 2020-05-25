@@ -21,6 +21,7 @@ const useStyles = makeStyles((theme: Theme) =>
       width: '80%',
       height: '80%',
       borderRadius: '4px',
+      overflow: 'auto',
     },
   }),
 );

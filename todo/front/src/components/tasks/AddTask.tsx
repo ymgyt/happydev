@@ -5,7 +5,7 @@ const AddTask = (props: any) => {
   return (
     <Paper style={{margin: 0, padding: 10}}>
       <Grid container justify='flex-end'>
-        <Grid md={2} item>
+        <Grid xs={2} item>
           <Button
             fullWidth
             color='primary'

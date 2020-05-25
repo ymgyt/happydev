@@ -1,4 +1,4 @@
-import {FETCH_TASKS, SET_LOADING, API_ERROR} from '../actions/types'
+import {FETCH_TASKS, SET_LOADING, API_ERROR, ADD_TASK} from '../actions/types'
 
 const initialState = {
   tasks: null,
@@ -14,6 +14,11 @@ export default (state:any = initialState, action:any) => {
        ...state,
        tasks: action.payload
      }
+   case ADD_TASK:
+     return {
+       ...state,
+       tasks: [...state.tasks, action.payload],
+     };
    case SET_LOADING:
      return {
        ...state,
