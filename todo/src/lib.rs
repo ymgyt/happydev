@@ -31,18 +31,18 @@ pub mod state {
     use tokio::sync::RwLock;
 
     // app state
-    pub type SharedState = Arc<RwLock<State>>;
+    pub type SharedState = Arc<State>;
 
     // in memory tasks
     pub type Tasks = Vec<task::Task>;
 
     pub struct State {
-        pub tasks: Tasks,
+        pub tasks: RwLock<Tasks>,
     }
 
     impl State {
         pub fn shared() -> SharedState {
-            Arc::new(RwLock::new(State::new()))
+            Arc::new(State::new())
         }
 
         pub fn new() -> Self {
@@ -55,17 +55,20 @@ pub mod state {
                     category: vo::Category::default(),
                     content: "content...".to_string(),
                 })
-                    .expect("Create task");
+                .expect("Create task");
                 tasks.push(t);
             }
 
-            Self { tasks }
+            Self {
+                tasks: RwLock::new(tasks),
+            }
         }
     }
 }
 
 pub mod router {
     use crate::{config, handler, prelude::*, state::SharedState};
+    use http::status::StatusCode;
     use hyper::header;
     use hyper::{Body, Method, Request, Response};
 
@@ -73,22 +76,22 @@ pub mod router {
     pub async fn service(
         state: SharedState,
         req: Request<Body>,
-    ) -> Result<Response<Body>, hyper::Error> {
+    ) -> Result<Response<Body>, anyhow::Error> {
         // TODO: closureでconnもらって、remote_addrもだす
         // requestはrouterにmoveするので、copyしておかないといけない
         let (method, path) = (req.method().to_owned(), req.uri().path().to_owned());
+        trace!("{:?}", req.headers());
 
         // CORS
         // Http Request Header Originにtodo frontendをserveしたドメインがはいっているか確認する
         // Response HeaderACCESS_CONTROL_ALLOW系の値をいれないとbrowserのfetch APIがエラーを発生させる
-        let mut allow_cors_access: bool = false;
-        if let Some(origin) = req.headers().get(header::ORIGIN) {
-            if let Ok(origin) = url::Url::parse(origin.to_str().unwrap()) {
-                trace!("origin {:?}", origin.host_str());
+        let mut allowed_origin: Option<header::HeaderValue> = None;
+        if let Some(origin_value) = req.headers().get(header::ORIGIN) {
+            if let Ok(origin) = url::Url::parse(origin_value.to_str().unwrap()) {
                 if let Some(host) = origin.host_str() {
                     config::cors_allowed_origins().iter().for_each(|allowed| {
                         if host.starts_with(allowed) {
-                            allow_cors_access = true;
+                            allowed_origin = Some(origin_value.to_owned());
                         }
                     })
                 }
@@ -100,12 +103,9 @@ pub mod router {
                 info!("{} {} {}", method, path, response.status());
 
                 // 帰りのmiddleware処理。ここもmiddlewareにきりだす
-                // 許可されたfront(js)の場合、Response Headerにその旨明示する。
-                if allow_cors_access {
-                    response.headers_mut().insert(
-                        header::ACCESS_CONTROL_ALLOW_ORIGIN,
-                        header::HeaderValue::from_static("*"),
-                    );
+                // CORS関連のheader処理
+                if let Some(origin) = allowed_origin {
+                    insert_cors_headers(origin, response.headers_mut());
                 }
 
                 // Content-Type設定
@@ -123,15 +123,30 @@ pub mod router {
     }
 
     // request entry point
-    pub async fn router(state: SharedState, req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
+    pub async fn router(
+        state: SharedState,
+        req: Request<Body>,
+    ) -> Result<Response<Body>, anyhow::Error> {
         let (method, path) = (req.method(), req.uri().path());
+        // CORSのpreflight時にはpathにPOST等のリクエストしたいPATHが指定されているので先に処理する
+        if method == Method::OPTIONS {
+            return Ok(Response::builder()
+                .status(StatusCode::NO_CONTENT)
+                .body(Body::empty())
+                .unwrap());
+        }
+
         match path {
             _tasks if path.starts_with("/tasks") => {
                 let task_handler = handler::TaskHandler::new();
                 match *method {
                     Method::GET => {
-                        let state = state.read().await;
-                        task_handler.get_tasks(req, &state.tasks)
+                        let tasks = state.tasks.read().await;
+                        task_handler.get_tasks(req, &tasks)
+                    }
+                    Method::POST => {
+                        let mut tasks = state.tasks.write().await;
+                        task_handler.create_task(req, &mut tasks).await
                     }
                     _ => handler::not_found(),
                 }
@@ -139,5 +154,27 @@ pub mod router {
             "/healthz" => handler::healthz(),
             _ => handler::not_found(),
         }
+    }
+
+    fn insert_cors_headers(origin: header::HeaderValue, headers: &mut header::HeaderMap) {
+        // ACCESS_CONTROL_ALLOW_CREDENTIALS: trueを利用する場合、wildcard指定は利用できない
+        // https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+        headers.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, origin);
+        headers.insert(
+            header::ACCESS_CONTROL_ALLOW_METHODS,
+            header::HeaderValue::from_static("GET, POST, PUT, DELETE, OPTIONS"),
+        );
+        headers.insert(
+            header::ACCESS_CONTROL_ALLOW_HEADERS,
+            header::HeaderValue::from_static("Content-Type"),
+        );
+        headers.insert(
+            header::ACCESS_CONTROL_MAX_AGE,
+            header::HeaderValue::from_static("10"), // CORSの挙動の勉強になるので短めに設定しておく
+        );
+        headers.insert(
+            header::ACCESS_CONTROL_ALLOW_CREDENTIALS,
+            header::HeaderValue::from_static("false"), // credential扱うようになったら許可する
+        );
     }
 }

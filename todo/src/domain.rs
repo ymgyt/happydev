@@ -1,9 +1,9 @@
 pub mod entity {
     pub mod task {
         use crate::domain::vo;
-        use serde::Serialize;
+        use serde::{Deserialize, Serialize};
 
-        #[derive(Debug,Serialize)]
+        #[derive(Debug, Serialize, Deserialize)]
         pub struct Task {
             id: vo::TaskId,
             title: String,
@@ -11,6 +11,7 @@ pub mod entity {
             content: String,
         }
 
+        #[derive(Deserialize, Debug)]
         pub struct CreateCommand {
             pub title: String,
             pub category: vo::Category,
@@ -34,10 +35,10 @@ pub mod entity {
 }
 
 pub mod vo {
+    use serde::{Deserialize, Serialize};
     use uuid::Uuid;
-    use serde::Serialize;
 
-    #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone,Serialize)]
+    #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, Serialize, Deserialize)]
     pub struct TaskId(Uuid);
 
     impl TaskId {
@@ -45,8 +46,14 @@ pub mod vo {
             Self(Uuid::new_v4())
         }
     }
+    // clippyに怒られたので定義しておく
+    impl Default for TaskId {
+        fn default() -> Self {
+            TaskId::new()
+        }
+    }
 
-    #[derive(Debug,Serialize)]
+    #[derive(Debug, Serialize, Deserialize)]
     pub struct Category(String);
 
     impl Default for Category {

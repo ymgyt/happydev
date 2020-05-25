@@ -817,6 +817,7 @@ dependencies = [
  "anyhow",
  "futures",
  "futures-util",
+ "http",
  "hyper",
  "mime",
  "pretty_env_logger",
