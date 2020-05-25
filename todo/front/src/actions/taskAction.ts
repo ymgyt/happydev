@@ -12,8 +12,10 @@ import TodoApi from "../gateway/todoApi";
 // fetch tasks from server
 export const fetchTasks = () => async (dispatch: any) => {
   try {
+    // このあたりは前後の処理を抽象化してclosureわたすような感じで書きたい
+    // withLoading(...)みたいな
     await setLoading(dispatch);
-    const data = await TodoApi.GET('/tasks');
+    const data = await TodoApi.getTasks({});
     await unsetLoading(dispatch);
 
     dispatch({
@@ -32,7 +34,7 @@ export const fetchTasks = () => async (dispatch: any) => {
 export const addTask = (task: any) => async (dispatch: any) => {
   try {
     await setLoading(dispatch);
-    const data = await TodoApi.POST('/tasks', task);
+    const data = await TodoApi.createTask(task);
     await unsetLoading(dispatch);
 
     dispatch({
@@ -46,8 +48,6 @@ export const addTask = (task: any) => async (dispatch: any) => {
     })
   }
 }
-
-// delete task from server
 
 export const setLoading = async (dispatch: any) => dispatch({type: SET_LOADING})
 export const unsetLoading = async (dispatch: any) => dispatch({type: UNSET_LOADING})

@@ -5,11 +5,19 @@ class TodoApiClient {
     this.url = url;
   }
 
-  async GET(path: string): Promise<any> {
+  async getTasks(param:any): Promise<any> {
+    return this.GET('/tasks')
+  }
+
+  async createTask(param: any): Promise<any> {
+    return this.POST('/tasks', param)
+  }
+
+  private async GET(path: string): Promise<any> {
     return fetch(this.endpoint(path)).then(res => res.json())
   }
 
-  async POST(path: string, body: any): Promise<any> {
+  private async POST(path: string, body: any): Promise<any> {
     return fetch(this.endpoint(path), {
       method: 'POST',
       body: JSON.stringify(body),
