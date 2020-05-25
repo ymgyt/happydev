@@ -4,7 +4,7 @@ import Task, {TaskProps} from './Task';
 import AddTask from "./AddTask";
 import AddTaskModal from "./AddTaskModal";
 import {List, Paper} from '@material-ui/core';
-import {fetchTasks,openAddTaskModal} from '../../actions/taskAction';
+import {fetchTasks, openAddTaskModal, deleteTask} from '../../actions/taskAction';
 
 export interface TasksProps {
   taskState: {
@@ -13,10 +13,11 @@ export interface TasksProps {
   }
   fetchTasks: any,
   openAddTaskModal: any,
+  deleteTask: any,
 }
 
-const Tasks: any = (props:TasksProps) => {
-  const {taskState: {tasks, loading}, fetchTasks,openAddTaskModal} = props;
+const Tasks: any = (props: TasksProps) => {
+  const {taskState: {tasks, loading}, fetchTasks, openAddTaskModal, deleteTask} = props;
 
   useEffect(() => {
     fetchTasks();
@@ -38,13 +39,14 @@ const Tasks: any = (props:TasksProps) => {
             <Task
               key={task.id}
               {...task}
+              onDeleteButtonClick={deleteTask}
               divider={true}
             />
           )}
         </List>
       )}
       <AddTask onButtonClick={handleAddTaskClick}/>
-      <AddTaskModal />
+      <AddTaskModal/>
     </Paper>
   )
 }
@@ -55,5 +57,5 @@ const mapStateToProps = (state: any) => ({
 
 export default connect(
   mapStateToProps,
-  {fetchTasks,openAddTaskModal}
+  {fetchTasks, openAddTaskModal,deleteTask}
 )(Tasks);

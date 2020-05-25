@@ -18,11 +18,14 @@ export interface TaskProps {
   // ui
   divider?: boolean,
   checked?: boolean,
-  onButtonClick?: any,
+  onDeleteButtonClick?: any,
   onCheckBoxToggle?: any,
 }
 
 const Task: React.FC<any> = (props: TaskProps) => {
+  const handleDelete = () => {
+    props.onDeleteButtonClick(props.id);
+  }
   return (
     <ListItem divider={props.divider}>
       <Checkbox
@@ -32,7 +35,7 @@ const Task: React.FC<any> = (props: TaskProps) => {
       />
       <ListItemText primary={props.title}/>
       <ListItemSecondaryAction>
-        <IconButton aria-label='Delete Todo' onClick={props.onButtonClick}>
+        <IconButton aria-label='Delete Todo' onClick={handleDelete}>
           <DeleteOutlined/>
         </IconButton>
       </ListItemSecondaryAction>

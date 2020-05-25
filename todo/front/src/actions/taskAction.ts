@@ -5,7 +5,7 @@ import {
   ADD_TASK,
   UNSET_LOADING,
   CLOSE_ADD_TASK_MODAL,
-  OPEN_ADD_TASK_MODAL
+  OPEN_ADD_TASK_MODAL, DELETE_TASK
 } from './types';
 import TodoApi from "../gateway/todoApi";
 
@@ -22,7 +22,7 @@ export const fetchTasks = () => async (dispatch: any) => {
       type: FETCH_TASKS,
       payload: data.tasks
     });
-  } catch (err) {
+  } catch (err) { // ここも共通化したい
     dispatch({
       type: API_ERROR,
       payload: err.response
@@ -47,7 +47,31 @@ export const addTask = (task: any) => async (dispatch: any) => {
       payload: err.response
     })
   }
-}
+};
+
+// delete task from server
+export const deleteTask = (taskId: string) => async (dispatch: any) => {
+  try {
+    await setLoading(dispatch);
+    const res = await TodoApi.deleteTask(taskId);
+    await unsetLoading(dispatch);
+
+    // Note: APIにResponse<T, APIError>みたいな型きって処理を共通化したい
+    if (!res.ok) {
+      throw new Error("NotOKErr")
+    }
+
+    dispatch({
+      type: DELETE_TASK,
+      payload: taskId,
+    })
+  } catch (err) {
+    dispatch({
+      type: API_ERROR,
+      payload: err.response
+    })
+  }
+};
 
 export const setLoading = async (dispatch: any) => dispatch({type: SET_LOADING})
 export const unsetLoading = async (dispatch: any) => dispatch({type: UNSET_LOADING})

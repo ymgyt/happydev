@@ -5,7 +5,7 @@ import {
   ADD_TASK,
   UNSET_LOADING,
   OPEN_ADD_TASK_MODAL,
-  CLOSE_ADD_TASK_MODAL
+  CLOSE_ADD_TASK_MODAL, DELETE_TASK
 } from '../actions/types'
 
 const initialState = {
@@ -27,6 +27,11 @@ export default (state: any = initialState, action: any) => {
       return {
         ...state,
         tasks: [...state.tasks, action.payload],
+      };
+    case DELETE_TASK:
+      return {
+        ...state,
+        tasks: state.tasks.filter((task:any) => task.id !== action.payload)
       };
     case SET_LOADING:
       return {
