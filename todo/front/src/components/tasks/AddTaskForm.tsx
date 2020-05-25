@@ -5,7 +5,7 @@ import Grid from "@material-ui/core/Grid";
 import Typography from "@material-ui/core/Typography";
 import Button from "@material-ui/core/Button";
 import TextField from "@material-ui/core/TextField";
-import {addTask} from '../../actions/taskAction';
+import {addTask,closeAddTaskModal} from '../../actions/taskAction';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -17,10 +17,11 @@ const useStyles = makeStyles((theme: Theme) =>
 
 interface AddTaskFormProps {
   addTask: any,
+  closeAddTaskModal:any
 }
 
 const AddTaskForm = (props: AddTaskFormProps) => {
-  const {addTask} = props;
+  const {addTask, closeAddTaskModal} = props;
 
   const classes = useStyles()
 
@@ -34,6 +35,7 @@ const AddTaskForm = (props: AddTaskFormProps) => {
       category: category,
       content: content,
     });
+    closeAddTaskModal();
   }
 
   return (
@@ -87,5 +89,5 @@ const AddTaskForm = (props: AddTaskFormProps) => {
 
 export default connect(
   null,
-  {addTask},
+  {addTask,closeAddTaskModal},
 )(AddTaskForm);

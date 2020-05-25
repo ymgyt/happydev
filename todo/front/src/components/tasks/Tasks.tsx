@@ -4,7 +4,7 @@ import Task, {TaskProps} from './Task';
 import AddTask from "./AddTask";
 import AddTaskModal from "./AddTaskModal";
 import {List, Paper} from '@material-ui/core';
-import {fetchTasks} from '../../actions/taskAction';
+import {fetchTasks,openAddTaskModal} from '../../actions/taskAction';
 
 export interface TasksProps {
   taskState: {
@@ -12,12 +12,11 @@ export interface TasksProps {
     loading: boolean,
   }
   fetchTasks: any,
+  openAddTaskModal: any,
 }
 
 const Tasks: any = (props:TasksProps) => {
-  const {taskState: {tasks, loading}, fetchTasks } = props;
-
-  const [openModal, setOpenModal] = React.useState<boolean>(false);
+  const {taskState: {tasks, loading}, fetchTasks,openAddTaskModal} = props;
 
   useEffect(() => {
     fetchTasks();
@@ -25,14 +24,9 @@ const Tasks: any = (props:TasksProps) => {
   }, []);
 
   const handleAddTaskClick = (event: any) => {
-    console.log('Add task requested!');
-    setOpenModal(true);
+    openAddTaskModal()
   }
 
-  const handleModalClosed = () => {
-    console.log('Close Modal');
-    setOpenModal(false);
-  }
   if (loading || tasks === null) {
     return <h4>Loading...</h4>
   }
@@ -50,7 +44,7 @@ const Tasks: any = (props:TasksProps) => {
         </List>
       )}
       <AddTask onButtonClick={handleAddTaskClick}/>
-      <AddTaskModal open={openModal} onClose={handleModalClosed}/>
+      <AddTaskModal />
     </Paper>
   )
 }
@@ -61,5 +55,5 @@ const mapStateToProps = (state: any) => ({
 
 export default connect(
   mapStateToProps,
-  {fetchTasks}
+  {fetchTasks,openAddTaskModal}
 )(Tasks);

@@ -1,12 +1,20 @@
-import {FETCH_TASKS, SET_LOADING,API_ERROR,ADD_TASK} from './types';
+import {
+  FETCH_TASKS,
+  SET_LOADING,
+  API_ERROR,
+  ADD_TASK,
+  UNSET_LOADING,
+  CLOSE_ADD_TASK_MODAL,
+  OPEN_ADD_TASK_MODAL
+} from './types';
 import TodoApi from "../gateway/todoApi";
 
 // fetch tasks from server
-export const fetchTasks = () => async (dispatch:any) => {
+export const fetchTasks = () => async (dispatch: any) => {
   try {
-    setLoading();
-
+    await setLoading(dispatch);
     const data = await TodoApi.GET('/tasks');
+    await unsetLoading(dispatch);
 
     dispatch({
       type: FETCH_TASKS,
@@ -20,18 +28,18 @@ export const fetchTasks = () => async (dispatch:any) => {
   }
 };
 
-// add new task
-export const addTask = (task:any) => async (dispatch:any) => {
-  try{
-    setLoading();
+// add new task to server
+export const addTask = (task: any) => async (dispatch: any) => {
+  try {
+    await setLoading(dispatch);
     const data = await TodoApi.POST('/tasks', task);
+    await unsetLoading(dispatch);
 
     dispatch({
       type: ADD_TASK,
-      payload: data.task,
+      payload: data,
     })
-
-  } catch(err) {
+  } catch (err) {
     dispatch({
       type: API_ERROR,
       payload: err.response
@@ -39,8 +47,9 @@ export const addTask = (task:any) => async (dispatch:any) => {
   }
 }
 
-export const setLoading = () => {
-  return {
-    type: SET_LOADING
-  }
-}
+// delete task from server
+
+export const setLoading = async (dispatch: any) => dispatch({type: SET_LOADING})
+export const unsetLoading = async (dispatch: any) => dispatch({type: UNSET_LOADING})
+export const openAddTaskModal = () => async (dispatch: any) => dispatch({type: OPEN_ADD_TASK_MODAL})
+export const closeAddTaskModal = () => async (dispatch: any) => dispatch({type: CLOSE_ADD_TASK_MODAL})
