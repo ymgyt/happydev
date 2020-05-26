@@ -6,6 +6,7 @@ use crate::{
 use hyper::body::Buf;
 use hyper::{Body, Request, Response, StatusCode};
 use serde::Serialize;
+use std::{borrow::Cow, collections::HashMap};
 
 pub fn not_found() -> Result<Response<Body>, anyhow::Error> {
     let mut not_found = Response::default();
@@ -20,8 +21,8 @@ pub fn healthz() -> Result<Response<Body>, anyhow::Error> {
 pub struct TaskHandler {}
 
 #[derive(Serialize)]
-pub struct GetTasksResponse<'a> {
-    tasks: &'a [entity::task::Task],
+pub struct GetTasksResponse<'a, 'b> {
+    tasks: &'a [&'b entity::task::Task],
 }
 
 impl TaskHandler {
@@ -32,14 +33,32 @@ impl TaskHandler {
     // taskの取得
     pub fn get_tasks(
         &self,
-        _req: Request<Body>,
+        req: Request<Body>,
         tasks: &[entity::task::Task],
     ) -> Result<Response<Body>, anyhow::Error> {
-        let response = GetTasksResponse { tasks };
+        let query: HashMap<Cow<str>, Cow<str>> = req
+            .uri()
+            .query()
+            .map(|q| url::form_urlencoded::parse(q.as_bytes()).collect())
+            .unwrap_or_default();
 
-        Ok(Response::new(Body::from(
-            serde_json::to_vec(&response).expect("Serialize tasks"),
-        )))
+        // queryによる検索
+        let tasks: Vec<&entity::task::Task> = if let Some(query) = query.get("query") {
+            // とりあえずtitle決め打ちの検索をおこなう
+            let query = query.to_ascii_lowercase();
+            tasks
+                .iter()
+                .filter(|&task| task.title().to_ascii_lowercase().contains(query.as_str()))
+                .collect()
+        } else {
+            tasks.iter().map(|task| task).collect()
+        };
+
+        serde_json::to_vec(&GetTasksResponse {
+            tasks: tasks.as_slice(),
+        })
+        .map_err(anyhow::Error::from)
+        .and_then(|v| Ok(Response::new(Body::from(v))))
     }
 
     // taskの作成

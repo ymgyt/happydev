@@ -25,28 +25,31 @@ pub mod config {
     }
 }
 
+// applicationのstate
+// 基本的にはexternal serviceのconnectionとかを保持する想定
+// 今はstorage層を組み込んでないので、in memoryに全部もっている
 pub mod state {
     use crate::domain::{entity::task, vo};
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    // app state
-    pub type SharedState = Arc<State>;
-
     // in memory tasks
     pub type Tasks = Vec<task::Task>;
 
+    // app state
     #[derive(Default)]
     pub struct State {
         pub tasks: RwLock<Tasks>,
     }
+
+    pub type SharedState = Arc<State>;
 
     impl State {
         pub fn shared() -> SharedState {
             Arc::new(State::new())
         }
 
-        pub fn new() -> Self {
+        fn new() -> Self {
             let mut tasks = Vec::new();
 
             // dummyの初期状態を作成する
@@ -80,7 +83,11 @@ pub mod router {
     ) -> Result<Response<Body>, anyhow::Error> {
         // TODO: closureでconnもらって、remote_addrもだす
         // requestはrouterにmoveするので、copyしておかないといけない
-        let (method, path) = (req.method().to_owned(), req.uri().path().to_owned());
+        let (method, path, query) = (
+            req.method().to_owned(),
+            req.uri().path().to_owned(),
+            req.uri().query().map(String::from),
+        );
         trace!("{:?}", req.headers());
 
         // CORS
@@ -101,7 +108,13 @@ pub mod router {
 
         match router(state, req).await {
             Ok(mut response) => {
-                info!("{} {} {}", method, path, response.status());
+                info!(
+                    "{} {} {} {}",
+                    response.status().as_u16(),
+                    method,
+                    path,
+                    query.unwrap_or_default()
+                );
 
                 // 帰りのmiddleware処理。ここもmiddlewareにきりだす
                 // CORS関連のheader処理
@@ -117,7 +130,7 @@ pub mod router {
                 Ok(response)
             }
             Err(err) => {
-                error!("{} {} {:?}", method, path, err);
+                error!("{} {}{} {:?}", method, path, query.unwrap_or_default(), err);
                 Err(err)
             }
         }

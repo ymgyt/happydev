@@ -30,6 +30,9 @@ pub mod entity {
             pub fn id(&self) -> vo::TaskId {
                 self.id
             }
+            pub fn title(&self) -> &str {
+                self.title.as_ref()
+            }
         }
     }
 }
