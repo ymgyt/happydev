@@ -7,15 +7,15 @@ import {
   CLOSE_ADD_TASK_MODAL,
   OPEN_ADD_TASK_MODAL, DELETE_TASK
 } from './types';
-import TodoApi from "../gateway/todoApi";
+import TodoApi, {fetchTasksParam} from "../gateway/todoApi";
 
 // fetch tasks from server
-export const fetchTasks = () => async (dispatch: any) => {
+export const fetchTasks = (param: fetchTasksParam) => async (dispatch: any) => {
   try {
     // このあたりは前後の処理を抽象化してclosureわたすような感じで書きたい
     // withLoading(...)みたいな
     await setLoading(dispatch);
-    const data = await TodoApi.getTasks({});
+    const data = await TodoApi.getTasks(param);
     await unsetLoading(dispatch);
 
     dispatch({

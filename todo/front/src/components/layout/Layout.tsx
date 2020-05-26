@@ -2,9 +2,9 @@ import React from 'react';
 import {AppBar, Toolbar, Typography, Paper, Box, Link} from '@material-ui/core';
 import {fade, makeStyles} from '@material-ui/core/styles';
 import SearchIcon from '@material-ui/icons/Search';
-import InputBase from "@material-ui/core/InputBase";
 import {ReactComponent as GithubLogo} from '../../assets/github-brands.svg';
 import SvgIcon from '@material-ui/core/SvgIcon';
+import SearchTask from '../tasks/SearchTask';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -33,20 +33,11 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  inputRoot: {
-    color: 'inherit',
-  },
-  inputInput: {
-    padding: '8px 8px 8px 0',
-    // vertical padding + font size from searchIcon
-    paddingLeft: `calc(1em + ${theme.spacing(4)}px)`,
-    transition: theme.transitions.create('width'),
-    width: '100%',
-  },
 }));
 
 const Layout = (props: any) => {
   const classes = useStyles();
+
   return (
     <Paper
       elevation={0}
@@ -60,13 +51,7 @@ const Layout = (props: any) => {
             <div className={classes.searchIcon}>
               <SearchIcon/>
             </div>
-            <InputBase
-              placeholder='Search Tasks'
-              classes={{
-                root: classes.inputRoot,
-                input: classes.inputInput,
-              }}
-            />
+          <SearchTask />
           </div>
         </Toolbar>
       </AppBar>

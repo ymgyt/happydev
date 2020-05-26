@@ -1,12 +1,36 @@
 import Config from "../Config";
 
+export interface fetchTasksParam extends baseFetchParam {
+  query: string
+}
+
+export interface baseFetchParam {
+  order: {
+    key: string
+    asc: boolean
+  }
+}
+
 class TodoApiClient {
   constructor(private readonly url: string) {
     this.url = url;
   }
 
-  async getTasks(param: any): Promise<any> {
-    return this.GET('/tasks')
+  async getTasks(given: fetchTasksParam): Promise<any> {
+    const param = {
+      ...{
+        query: '',
+        order: {key: 'id', asc: true},
+      }, ...given
+    };
+    // interfaceにmethod定義したい
+    // Uri classとかを使う
+    let q = "";
+    if (param.query) {
+      q = `query=${param.query}&`
+    }
+    q = q + `order=${param.order.key}&asc=${param.order.asc}`;
+    return this.GET('/tasks?' + q)
   }
 
   async createTask(param: any): Promise<any> {

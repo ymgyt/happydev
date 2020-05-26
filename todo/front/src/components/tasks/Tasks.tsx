@@ -4,7 +4,7 @@ import Task, {TaskProps} from './Task';
 import AddTask from "./AddTask";
 import AddTaskModal from "./AddTaskModal";
 import {List, Paper} from '@material-ui/core';
-import {fetchTasks, openAddTaskModal, deleteTask} from '../../actions/taskAction';
+import {fetchTasks, openAddTaskModal, deleteTask,} from '../../actions/taskAction';
 
 export interface TasksProps {
   taskState: {
@@ -20,7 +20,7 @@ const Tasks: any = (props: TasksProps) => {
   const {taskState: {tasks, loading}, fetchTasks, openAddTaskModal, deleteTask} = props;
 
   useEffect(() => {
-    fetchTasks();
+    fetchTasks({query:"", order:{key: "created_at", asc:true}});
     // eslint-disable-next-line
   }, []);
 
@@ -57,5 +57,5 @@ const mapStateToProps = (state: any) => ({
 
 export default connect(
   mapStateToProps,
-  {fetchTasks, openAddTaskModal,deleteTask}
+  {fetchTasks, openAddTaskModal, deleteTask}
 )(Tasks);
