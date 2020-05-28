@@ -1,3 +1,70 @@
+use std::{io::{Read, Write, Seek,SeekFrom::*}, path::Path};
+use crate::Result;
+use serde::{Serialize};
+use crate::error::KvsError;
+
+
+pub struct Kvs<F> {
+    file: F,
+    index: entry::KeyIndex,
+    position: u64,
+}
+
+impl<F> Kvs<F>
+    where F: Read + Write + Seek {
+    pub fn with_path<P: AsRef<Path>>(_path: P) -> Result<Self> {
+        todo!();
+    }
+
+    pub fn new(mut file: F) -> Result<Self> {
+        let index = entry::KeyIndex::construct_from(&mut file)?;
+        let position = file.seek(Current(0))?;
+        Ok(Self {
+            file,
+            index,
+            position,
+        })
+    }
+
+    pub fn pos(&self) -> u64 {
+        self.position
+    }
+
+    pub fn dump(&mut self, buf: &mut [u8]) -> Result<()> {
+        self.file.seek(Start(0))?;
+        self.file.read_exact(buf)?;
+        Ok(())
+    }
+
+    pub fn flush(&mut self) -> Result<()> {
+        self.file.flush().map_err(KvsError::from)
+    }
+
+    pub fn put_encoded<K>(&mut self, key: K, value: Vec<u8>) -> Result<()>
+        where K: Into<String>{
+        let entry = entry::Entry::new(key, value)?;
+        let n = entry.encode(&mut self.file)?;
+        debug_assert_eq!(entry.len(), n, "decoded bytes does not match");
+
+        self.index.0.insert(entry.key, self.position as usize);
+        self.position += n as u64;
+
+        Ok(())
+    }
+
+    pub fn get_encoded(&mut self, key: &str) -> Result<Vec<u8>> {
+        if let Some(&offset) = self.index.0.get(key) {
+            self.file.seek(Start(offset as u64))?;
+            let entry = entry::Entry::decode(&mut self.file)?;
+
+            self.file.seek(Start(self.position))?;
+            Ok(entry.value)
+        } else {
+            Err(KvsError::NotFound)
+        }
+    }
+}
+
 pub(crate) mod entry {
     use crate::Result;
     use byteorder::{ReadBytesExt, WriteBytesExt, BE};
@@ -24,11 +91,11 @@ pub(crate) mod entry {
     }
 
     #[derive(PartialEq, Clone)]
-    struct Entry {
+    pub(crate) struct Entry {
         checksum: u32,
         header: Header,
-        key: String,
-        value: Vec<u8>,
+        pub(crate) key: String,
+        pub(crate)value: Vec<u8>,
     }
 
     #[derive(PartialEq, Clone)]
@@ -131,7 +198,7 @@ pub(crate) mod entry {
     }
 
     #[derive(Debug)]
-    struct KeyIndex(HashMap<String, usize>);
+    pub(crate) struct KeyIndex(pub HashMap<String, usize>);
 
     impl KeyIndex {
         pub(crate) fn construct_from<R: Read>(mut r: R) -> Result<Self> {
@@ -208,7 +275,7 @@ pub(crate) mod entry {
         }
 
         #[test]
-        fn key_index_from() -> StdResult<(),Error>{
+        fn key_index_from() -> StdResult<(), Error> {
             let entries = vec![
                 Entry::new("1", vec![b'1'])?,
                 Entry::new("2", vec![b'2'])?,
@@ -222,15 +289,59 @@ pub(crate) mod entry {
             cursor.seek(SeekFrom::Start(0))?;
 
             let index = KeyIndex::construct_from(&mut cursor)?;
-            let mut position:usize  = 0;
+            let mut position: usize = 0;
             for entry in entries {
                 let offset = index.0.get(entry.key.as_str()).unwrap();
                 assert_eq!(*offset, position);
                 position += entry.len();
             }
-            println!("{:#?}", index);
 
             Ok(())
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::entry::*;
+    use anyhow::Error;
+    use std::io::{Cursor, Read, Seek, SeekFrom};
+    use std::result::Result as StdResult;
+    use std::io::SeekFrom::Current;
+    use std::fs::File;
+
+    #[test]
+    fn put_and_get() -> StdResult<(), Error>{
+        let entries = vec![
+            Entry::new("1", vec![b'1'])?,
+            Entry::new("2", vec![b'2'])?,
+            Entry::new("3", vec![b'3'])?,
+        ];
+
+        let cursor = Cursor::new(Vec::new());
+        let mut kvs = Kvs::new(cursor)?;
+
+        entries.iter().for_each(|entry| {
+            kvs.put_encoded(&entry.key, entry.value.clone()).unwrap();
+        });
+
+        assert_eq!(kvs.get_encoded("1")?, vec![b'1']);
+        assert_eq!(kvs.get_encoded("2")?, vec![b'2']);
+        assert_eq!(kvs.get_encoded("3")?, vec![b'3']);
+
+        let mut buff = std::iter::repeat(0).take(kvs.pos() as usize).collect::<Vec<u8>>();
+        kvs.dump(&mut buff)?;
+
+        let mut cursor = Cursor::new(buff);
+        cursor.seek(Start(0))?;
+        let mut kvs = Kvs::new(cursor)?;
+        assert_eq!(kvs.get_encoded("1")?, vec![b'1']);
+        assert_eq!(kvs.get_encoded("2")?, vec![b'2']);
+        assert_eq!(kvs.get_encoded("3")?, vec![b'3']);
+
+        Ok(())
+    }
+
+}
+
