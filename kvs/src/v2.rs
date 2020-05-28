@@ -1,8 +1,29 @@
 pub(crate) mod entry {
     use crate::Result;
     use byteorder::{ReadBytesExt, WriteBytesExt, BE};
-    use std::fmt;
+    use std::{fmt, convert::TryFrom, io::Read, collections::HashMap};
+    use crate::error::KvsError;
 
+    #[repr(u8)]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    enum State {
+        Active = 1,
+        Deleted = 2,
+    }
+
+    impl TryFrom<u8> for State {
+        type Error = KvsError;
+
+        fn try_from(n: u8) -> std::result::Result<Self, Self::Error> {
+            match n {
+                1 => Ok(State::Active),
+                2 => Ok(State::Deleted),
+                _ => Err(KvsError::InvalidState(n))
+            }
+        }
+    }
+
+    #[derive(PartialEq, Clone)]
     struct Entry {
         checksum: u32,
         header: Header,
@@ -10,17 +31,15 @@ pub(crate) mod entry {
         value: Vec<u8>,
     }
 
+    #[derive(PartialEq, Clone)]
     struct Header {
         state: State,
         key_len: u16,
         value_len: u32,
     }
 
-    #[repr(u8)]
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    enum State {
-        Active = 1,
-        Deleted = 2,
+    impl Header {
+        const LEN: usize = 1 + 2 + 4; // state(1) + key_ley(2) + value_len(4)
     }
 
     impl Entry {
@@ -52,6 +71,30 @@ pub(crate) mod entry {
             n += w.write(self.value.as_slice())?;
 
             Ok(n)
+        }
+
+        pub(crate) fn decode<R: ReadBytesExt>(mut r: R) -> Result<Self> {
+            let checksum = r.read_u32::<BE>()?;
+            let state = State::try_from(r.read_u8()?)?;
+            let key_len = r.read_u16::<BE>()?;
+            let value_len = r.read_u32::<BE>()?;
+
+            let mut key = String::with_capacity(key_len as usize);
+            r.by_ref().take(key_len as u64).read_to_string(&mut key)?;
+
+            let mut value = Vec::with_capacity(value_len as usize);
+            r.by_ref().take(value_len as u64).read_to_end(&mut value)?;
+
+            Ok(Entry {
+                checksum,
+                header: Header {
+                    state,
+                    key_len,
+                    value_len,
+                },
+                key,
+                value,
+            })
         }
 
         pub(crate) fn len(&self) -> usize {
@@ -87,8 +130,28 @@ pub(crate) mod entry {
         }
     }
 
-    impl Header {
-        const LEN: usize = 1 + 2 + 4; // state(1) + key_ley(2) + value_len(4)
+    #[derive(Debug)]
+    struct KeyIndex(HashMap<String, usize>);
+
+    impl KeyIndex {
+        pub(crate) fn construct_from<R: Read>(mut r: R) -> Result<Self> {
+            let mut h = HashMap::new();
+            let mut position = 0;
+            let err = loop {
+                if let Err(err) = Entry::decode(r.by_ref()).map(|entry| {
+                    let entry_len = entry.len();
+                    h.insert(entry.key, position);
+                    position += entry_len;
+                }) {
+                    break err;
+                }
+            };
+            if err.is_eof() {
+                Ok(Self(h))
+            } else {
+                Err(err)
+            }
+        }
     }
 
     #[cfg(test)]
@@ -97,21 +160,18 @@ pub(crate) mod entry {
         use anyhow::Error;
         use std::io::{Cursor, Read, Seek, SeekFrom};
         use std::result::Result as StdResult;
+        use std::io::SeekFrom::Current;
 
         #[test]
-        fn encode() -> StdResult<(), Error> {
+        fn encode_decode() -> StdResult<(), Error> {
             let mut cursor = Cursor::new(Vec::with_capacity(200));
             let entry = Entry::new("1", vec![b'1'])?;
 
             let encode_bytes = entry.encode(&mut cursor)?;
             assert_eq!(encode_bytes, entry.len());
 
-            // ２つ目から確認する
-            entry.encode(&mut cursor)?;
-            cursor.seek(SeekFrom::Start(entry.len() as u64))?;
-
             // skip crc32
-            cursor.seek(SeekFrom::Current(4))?;
+            cursor.seek(SeekFrom::Start(4))?;
 
             // state
             let mut buff = [0_u8; 1];
@@ -121,12 +181,12 @@ pub(crate) mod entry {
             // key_len
             let mut buff = [0_u8; 2];
             cursor.read_exact(&mut buff)?;
-            assert_eq!(&buff, &[0,1], "key_len does not match");
+            assert_eq!(&buff, &[0, 1], "key_len does not match");
 
             // value_len
             let mut buff = [0_u8; 4];
             cursor.read_exact(&mut buff)?;
-            assert_eq!(&buff, &[0,0,0,1], "value_len does not match");
+            assert_eq!(&buff, &[0, 0, 0, 1], "value_len does not match");
 
             // key
             let mut buff = [0_u8; 1];
@@ -134,9 +194,41 @@ pub(crate) mod entry {
             assert_eq!(&buff, &[b'1'], "key does not match");
 
             // value
-            let mut buff = [0_u8;1];
+            let mut buff = [0_u8; 1];
             cursor.read_exact(&mut buff)?;
             assert_eq!(&buff, &[b'1'], "value does not match");
+
+
+            cursor.seek(SeekFrom::Start(0))?;
+            let decoded = Entry::decode(&mut cursor)?;
+            assert_eq!(decoded, entry, "decoded entry does not match");
+            assert_eq!(cursor.seek(SeekFrom::Current(0))?, decoded.len() as u64);
+
+            Ok(())
+        }
+
+        #[test]
+        fn key_index_from() -> StdResult<(),Error>{
+            let entries = vec![
+                Entry::new("1", vec![b'1'])?,
+                Entry::new("2", vec![b'2'])?,
+                Entry::new("3", vec![b'3'])?,
+            ];
+
+            let mut cursor = Cursor::new(Vec::new());
+            entries.iter().for_each(|entry| {
+                entry.encode(&mut cursor).unwrap();
+            });
+            cursor.seek(SeekFrom::Start(0))?;
+
+            let index = KeyIndex::construct_from(&mut cursor)?;
+            let mut position:usize  = 0;
+            for entry in entries {
+                let offset = index.0.get(entry.key.as_str()).unwrap();
+                assert_eq!(*offset, position);
+                position += entry.len();
+            }
+            println!("{:#?}", index);
 
             Ok(())
         }
