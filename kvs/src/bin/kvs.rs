@@ -1,37 +1,39 @@
-use anyhow;
-use kvs::Kvs;
-use serde::{ Deserialize, Serialize};
+use std::path::PathBuf;
+use structopt::{clap, StructOpt};
 
-#[derive(Serialize, Deserialize, Debug)]
-struct User {
-    id: String,
-    name: String,
+#[derive(StructOpt, Debug)]
+#[structopt(
+    name = "kvs",
+    about = "kvs cli",
+    version(env!("CARGO_PKG_VERSION")),
+    setting(clap::AppSettings::ArgRequiredElseHelp),
+    global_settings(&[
+        clap::AppSettings::ColoredHelp,
+    ]),
+)]
+pub struct Opt {
+    #[structopt(
+        long = "file",
+        short = "f",
+        global = true,
+        help = "specify log data file.",
+        env = "KVS_FILE",
+        default_value = ".data.kvs"
+    )]
+    pub file: PathBuf,
 }
 
-fn main() -> anyhow::Result<()> {
-    let mut s = Kvs::new(".")?;
-    s.store("ymgyt", String::from("Hello ymgyt!"))?;
-    s.store("ymgyt", String::from("Hello ymgyt!!"))?;
-    match s.get::<String>("ymgyt") {
-        Ok(Some(msg)) => println!("I got {}", msg),
-        Ok(None) => println!("not found..."),
-        Err(err) => println!("err: {}", err),
-    }
+fn run() -> Result<(), anyhow::Error> {
+    let opt = Opt::from_args();
 
-    s.store(
-        "users.AAA",
-        User {
-            id: "AAA".to_string(),
-            name: "ymgyt".to_string(),
-        },
-    )?;
-
-    match s.get::<User>("users.AAA") {
-        Ok(Some(msg)) => println!("I got {:?}", msg),
-        Ok(None) => println!("not found..."),
-        Err(err) => println!("err: {}", err),
-    }
-
+    println!("file {:?}", opt.file);
 
     Ok(())
+}
+
+fn main() {
+    if let Err(err) = run() {
+        eprintln!("{}", err);
+        std::process::exit(1);
+    }
 }
