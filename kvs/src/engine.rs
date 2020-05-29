@@ -1,5 +1,8 @@
-use crate::error::KvsError;
-use crate::{entry, Result};
+use crate::{
+    entry::{self, Entry},
+    error::KvsError,
+    Result,
+};
 use std::{
     fs,
     io::{self, Read, Seek, SeekFrom::*, Write},
@@ -26,45 +29,74 @@ where
         })
     }
 
-    pub fn pos(&self) -> u64 {
-        self.position
-    }
-
-    pub fn dump(&mut self, buf: &mut [u8]) -> Result<()> {
-        self.file.seek(Start(0))?;
-        self.file.read_exact(buf)?;
-        Ok(())
-    }
-
-    pub fn flush(&mut self) -> Result<()> {
-        self.file.flush().map_err(KvsError::from)
-    }
-
-    pub fn put_encoded<K>(&mut self, key: K, value: Vec<u8>) -> Result<()>
+    pub fn put<K>(&mut self, key: K, value: Vec<u8>) -> Result<()>
     where
         K: Into<String>,
     {
-        let entry = entry::Entry::new(key, value)?;
+        self.put_entry(Entry::new(key, value)?)
+    }
+
+    fn put_entry(&mut self, entry: Entry) -> Result<()> {
         let n = entry.encode(&mut self.file)?;
         self.file.flush()?; // cleanupまわりに不安があるので毎回flushする
         debug_assert_eq!(entry.len(), n, "decoded bytes does not match");
 
-        self.index.0.insert(entry.key, self.position as usize);
+        if !entry.is_deleted() {
+            self.index.0.insert(entry.key, self.position as usize);
+        }
         self.position += n as u64;
 
         Ok(())
     }
 
-    pub fn get_encoded(&mut self, key: &str) -> Result<Vec<u8>> {
+    pub fn get<K>(&mut self, key: K) -> Result<Vec<u8>>
+    where
+        K: AsRef<str>,
+    {
+        self.get_entry(key.as_ref()).map(|entry| entry.value)
+    }
+
+    fn get_entry(&mut self, key: &str) -> Result<Entry> {
         if let Some(&offset) = self.index.0.get(key) {
             self.file.seek(Start(offset as u64))?;
-            let entry = entry::Entry::decode(&mut self.file)?;
+            let entry = Entry::decode_with_check(&mut self.file)?;
 
             self.file.seek(Start(self.position))?;
-            Ok(entry.value)
+            Ok(entry)
         } else {
             Err(KvsError::NotFound)
         }
+    }
+
+    // If the key exists, it returns the deleted value.
+    // Return None if it does not exist.
+    pub fn delete<K>(&mut self, key: K) -> Result<Option<Vec<u8>>>
+    where
+        K: AsRef<str>,
+    {
+        self.delete_entry(key.as_ref())
+            .map(|opt| opt.map(|entry| entry.value))
+    }
+
+    fn delete_entry(&mut self, key: &str) -> Result<Option<Entry>> {
+        let entry = match self.get_entry(key.as_ref()) {
+            Ok(entry) => entry,
+            Err(KvsError::NotFound) => return Ok(None),
+            Err(err) => return Err(err),
+        };
+        // persist
+        self.put_entry(entry.mark_delete()?)?;
+
+        // remove from index
+        self.index.0.remove(key);
+        Ok(Some(entry))
+    }
+
+    #[cfg(test)]
+    fn dump(&mut self, buf: &mut [u8]) -> Result<()> {
+        self.file.seek(Start(0))?;
+        self.file.read_exact(buf)?;
+        Ok(())
     }
 }
 
@@ -73,7 +105,11 @@ impl Kvs<fs::File> {
         let path = path.as_ref();
 
         // make sure root directory exists
-        if let Some(parent) = path.parent() {
+        // ".data.kvs".parent() return Some("")
+        if let Some(parent) = path
+            .parent()
+            .filter(|&p| !p.to_str().unwrap_or("").is_empty())
+        {
             match fs::create_dir(parent) {
                 Ok(_) => (),
                 Err(err) => match err.kind() {
@@ -120,24 +156,47 @@ mod tests {
         let mut kvs = Kvs::new(cursor)?;
 
         entries.iter().for_each(|entry| {
-            kvs.put_encoded(&entry.key, entry.value.clone()).unwrap();
+            kvs.put(&entry.key, entry.value.clone()).unwrap();
         });
 
-        assert_eq!(kvs.get_encoded("1")?, vec![b'1']);
-        assert_eq!(kvs.get_encoded("2")?, vec![b'2']);
-        assert_eq!(kvs.get_encoded("3")?, vec![b'3']);
+        assert_eq!(kvs.get("1")?, vec![b'1']);
+        assert_eq!(kvs.get("2")?, vec![b'2']);
+        assert_eq!(kvs.get("3")?, vec![b'3']);
 
         let mut buff = std::iter::repeat(0)
-            .take(kvs.pos() as usize)
+            .take(kvs.position as usize)
             .collect::<Vec<u8>>();
         kvs.dump(&mut buff)?;
 
         let mut cursor = Cursor::new(buff);
         cursor.seek(Start(0))?;
         let mut kvs = Kvs::new(cursor)?;
-        assert_eq!(kvs.get_encoded("1")?, vec![b'1']);
-        assert_eq!(kvs.get_encoded("2")?, vec![b'2']);
-        assert_eq!(kvs.get_encoded("3")?, vec![b'3']);
+        assert_eq!(kvs.get("1")?, vec![b'1']);
+        assert_eq!(kvs.get("2")?, vec![b'2']);
+        assert_eq!(kvs.get("3")?, vec![b'3']);
+
+        Ok(())
+    }
+
+    #[test]
+    fn delete() -> StdResult<(), Error> {
+        let mut kvs = Kvs::new(Cursor::new(Vec::new()))?;
+        kvs.put("1", vec![b'1'])?;
+
+        assert_eq!(kvs.delete("1").unwrap(), Some(vec![b'1']));
+        assert!(kvs.get("1").unwrap_err().is_not_found());
+        assert_eq!(kvs.delete("1").unwrap(), None);
+
+        // 削除された状態が維持されるか
+        let mut buff = std::iter::repeat(0)
+            .take(kvs.position as usize)
+            .collect::<Vec<u8>>();
+        kvs.dump(&mut buff)?;
+
+        let mut cursor = Cursor::new(buff);
+        cursor.seek(Start(0))?;
+        let mut kvs = Kvs::new(cursor)?;
+        assert!(kvs.get("1").unwrap_err().is_not_found());
 
         Ok(())
     }

@@ -21,6 +21,8 @@ pub enum KvsError {
     InvalidState(u8),
     #[error("not found")]
     NotFound,
+    #[error("crc does not match")]
+    CorruptData,
     #[error("unknown err")]
     Unknown,
 }
@@ -31,6 +33,20 @@ impl KvsError {
             source.kind() == io::ErrorKind::UnexpectedEof
         } else {
             false
+        }
+    }
+
+    pub fn is_not_found(&self) -> bool {
+        match self {
+            KvsError::NotFound => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_data_corrupt(&self) -> bool {
+        match self {
+            KvsError::CorruptData => true,
+            _ => false,
         }
     }
 }

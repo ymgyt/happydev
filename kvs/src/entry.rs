@@ -1,5 +1,4 @@
-use crate::error::KvsError;
-use crate::Result;
+use crate::{error::KvsError, Result};
 use byteorder::{ReadBytesExt, WriteBytesExt, BE};
 use std::{collections::HashMap, convert::TryFrom, fmt, io::Read};
 
@@ -43,20 +42,31 @@ impl Header {
 
 impl Entry {
     pub(crate) fn new<K: Into<String>>(key: K, value: Vec<u8>) -> Result<Self> {
-        let key = key.into();
+        Entry::new_with_state(key.into(), value, State::Active)
+    }
+
+    fn new_with_state(key: String, value: Vec<u8>, state: State) -> Result<Self> {
         let mut e = Entry {
             checksum: 0,
             header: Header {
-                state: State::Active,
+                state,
                 key_len: key.len() as u16,     // TODO check
                 value_len: value.len() as u32, // TODO check
             },
             key,
             value,
         };
-        e.checksum = e.checksum()?;
+        e.checksum = e.calc_checksum()?;
 
         Ok(e)
+    }
+
+    pub(crate) fn mark_delete(&self) -> Result<Self> {
+        Entry::new_with_state(self.key.clone(), Vec::new(), State::Deleted)
+    }
+
+    pub(crate) fn is_deleted(&self) -> bool {
+        self.header.state == State::Deleted
     }
 
     pub(crate) fn encode<W: WriteBytesExt>(&self, mut w: W) -> Result<usize> {
@@ -70,6 +80,15 @@ impl Entry {
         n += w.write(self.value.as_slice())?;
 
         Ok(n)
+    }
+    pub(crate) fn decode_with_check<R: ReadBytesExt>(r: R) -> Result<Self> {
+        Entry::decode(r).and_then(|entry| {
+            if entry.checksum != entry.calc_checksum()? {
+                Err(KvsError::CorruptData)
+            } else {
+                Ok(entry)
+            }
+        })
     }
 
     pub(crate) fn decode<R: ReadBytesExt>(mut r: R) -> Result<Self> {
@@ -100,7 +119,7 @@ impl Entry {
         4 + Header::LEN + self.key.len() + self.value.len()
     }
 
-    fn checksum(&self) -> Result<u32> {
+    fn calc_checksum(&self) -> Result<u32> {
         let mut h = crc32fast::Hasher::new();
         let mut buff = Vec::with_capacity(Header::LEN);
         buff.write_u8(self.header.state as u8)?;
@@ -139,7 +158,13 @@ impl KeyIndex {
         let err = loop {
             if let Err(err) = Entry::decode(r.by_ref()).map(|entry| {
                 let entry_len = entry.len();
-                h.insert(entry.key, position);
+                if entry.is_deleted() {
+                    // 削除されているentryは明示的にindexから削除しておかないと
+                    // 削除前のentryがindexに残ってしまう
+                    h.remove(entry.key.as_str());
+                } else {
+                    h.insert(entry.key, position);
+                }
                 position += entry_len;
             }) {
                 break err;
@@ -199,6 +224,45 @@ mod tests {
         cursor.seek(SeekFrom::Start(0))?;
         let decoded = Entry::decode(&mut cursor)?;
         assert_eq!(decoded, entry, "decoded entry does not match");
+        assert_eq!(cursor.seek(SeekFrom::Current(0))?, decoded.len() as u64);
+
+        Ok(())
+    }
+
+    #[test]
+    fn encode_decode_deleted() -> StdResult<(), KvsError> {
+        let mut cursor = Cursor::new(Vec::new());
+        let deleted = Entry::new("1", vec![b'1'])?.mark_delete()?;
+        deleted.encode(&mut cursor)?;
+
+        // skip crc32
+        cursor.seek(SeekFrom::Start(4))?;
+
+        // state
+        let mut buff = [0_u8; 1];
+        cursor.read_exact(&mut buff)?;
+        assert_eq!(State::Deleted as u8, buff[0], "state does not match");
+
+        // key_len
+        let mut buff = [0_u8; 2];
+        cursor.read_exact(&mut buff)?;
+        assert_eq!(&buff, &[0, 1], "key_len does not match");
+
+        // value_len
+        let mut buff = [0_u8; 4];
+        cursor.read_exact(&mut buff)?;
+        assert_eq!(&buff, &[0, 0, 0, 0], "value_len does not match");
+
+        // key
+        let mut buff = [0_u8; 1];
+        cursor.read_exact(&mut buff)?;
+        assert_eq!(&buff, &[b'1'], "key does not match");
+
+        // value is empty
+
+        cursor.seek(SeekFrom::Start(0))?;
+        let decoded = Entry::decode(&mut cursor)?;
+        assert_eq!(decoded, deleted, "decoded entry does not match");
         assert_eq!(cursor.seek(SeekFrom::Current(0))?, decoded.len() as u64);
 
         Ok(())
