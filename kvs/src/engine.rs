@@ -38,7 +38,6 @@ where
 
     fn put_entry(&mut self, entry: Entry) -> Result<()> {
         let n = entry.encode(&mut self.file)?;
-        self.file.flush()?; // cleanupまわりに不安があるので毎回flushする
         debug_assert_eq!(entry.len(), n, "decoded bytes does not match");
 
         if !entry.is_deleted() {
