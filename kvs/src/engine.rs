@@ -98,7 +98,7 @@ where
     }
 }
 
-impl Kvs<io::BufReader<fs::File>> {
+impl Kvs<fs::File> {
     pub fn with_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path = path.as_ref();
 
@@ -117,15 +117,12 @@ impl Kvs<io::BufReader<fs::File>> {
             }
         }
 
-        let file = fs::OpenOptions::new()
+        let mut file = fs::OpenOptions::new()
             .append(true)
             .create(true)
             .read(true)
             .write(true)
             .open(path)?;
-        // BufReaderがbufferを超えてseekしたときにどうなるのかわかっていないので
-        // 意図的にひくいbufferを設定してみる
-        let mut file = io::BufReader::with_capacity(8, file);
 
         let index = entry::KeyIndex::construct_from(&mut file)?;
 
