@@ -3,23 +3,19 @@ use crate::{
     error::KvsError,
     Result,
 };
-use std::{
-    fs,
-    io::{self, Read, Seek, SeekFrom::*, Write},
-    path::Path,
-};
+use std::io::{Read, Seek, SeekFrom::*, Write};
 
-pub struct Kvs<F> {
+pub struct Engine<F> {
     file: F,
     index: entry::KeyIndex,
     position: u64,
 }
 
-impl<F> Kvs<F>
+impl<F> Engine<F>
 where
     F: Read + Write + Seek,
 {
-    pub fn new(mut file: F) -> Result<Self> {
+    pub(crate) fn new(mut file: F) -> Result<Self> {
         let index = entry::KeyIndex::construct_from(&mut file)?;
         let position = file.seek(Current(0))?;
         Ok(Self {
@@ -29,7 +25,7 @@ where
         })
     }
 
-    pub fn put<K>(&mut self, key: K, value: Vec<u8>) -> Result<()>
+    pub(crate) fn put<K>(&mut self, key: K, value: Vec<u8>) -> Result<()>
     where
         K: Into<String>,
     {
@@ -48,7 +44,7 @@ where
         Ok(())
     }
 
-    pub fn get<K>(&mut self, key: K) -> Result<Vec<u8>>
+    pub(crate) fn get<K>(&mut self, key: K) -> Result<Vec<u8>>
     where
         K: AsRef<str>,
     {
@@ -98,42 +94,6 @@ where
     }
 }
 
-impl Kvs<fs::File> {
-    pub fn with_path<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let path = path.as_ref();
-
-        // make sure root directory exists
-        // ".data.kvs".parent() return Some("")
-        if let Some(parent) = path
-            .parent()
-            .filter(|&p| !p.to_str().unwrap_or("").is_empty())
-        {
-            match fs::create_dir(parent) {
-                Ok(_) => (),
-                Err(err) => match err.kind() {
-                    io::ErrorKind::AlreadyExists => (),
-                    _ => return Err(err.into()),
-                },
-            }
-        }
-
-        let mut file = fs::OpenOptions::new()
-            .append(true)
-            .create(true)
-            .read(true)
-            .write(true)
-            .open(path)?;
-
-        let index = entry::KeyIndex::construct_from(&mut file)?;
-
-        Ok(Kvs {
-            file,
-            index,
-            position: 0,
-        })
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::entry::*;
@@ -142,7 +102,7 @@ mod tests {
     use std::io::{Cursor, Seek};
     use std::result::Result as StdResult;
 
-    type InMemoryKvs = Kvs<Cursor<Vec<u8>>>;
+    type InMemoryKvs = Engine<Cursor<Vec<u8>>>;
 
     #[test]
     fn put_and_get() -> StdResult<(), Error> {
@@ -188,7 +148,7 @@ mod tests {
     }
 
     fn in_memory_kvs() -> InMemoryKvs {
-        Kvs::new(Cursor::new(Vec::new())).unwrap()
+        Engine::new(Cursor::new(Vec::new())).unwrap()
     }
 
     // kvsのfile(buffer)をdumpして再度、kvsを作成しなおす
@@ -201,6 +161,6 @@ mod tests {
 
         let mut cursor = Cursor::new(buff);
         cursor.seek(Start(0)).unwrap();
-        Kvs::new(cursor).unwrap()
+        Engine::new(cursor).unwrap()
     }
 }

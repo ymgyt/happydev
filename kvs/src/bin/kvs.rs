@@ -4,13 +4,13 @@ use structopt::{clap, StructOpt};
 
 #[derive(StructOpt, Debug)]
 #[structopt(
-name = "kvs",
-about = "kvs cli",
-version(env ! ("CARGO_PKG_VERSION")),
-setting(clap::AppSettings::ArgRequiredElseHelp),
-global_settings(& [
-clap::AppSettings::ColoredHelp,
-]),
+    name = "kvs",
+    about = "kvs cli",
+    version(env ! ("CARGO_PKG_VERSION")),
+    setting(clap::AppSettings::ArgRequiredElseHelp),
+    global_settings(& [
+        clap::AppSettings::ColoredHelp,
+    ]),
 )]
 pub struct Opt {
     #[structopt(
@@ -51,19 +51,18 @@ pub enum SubCommand {
 fn run() -> Result<(), anyhow::Error> {
     let opt = Opt::from_args();
 
-    let mut kvs = Kvs::with_path(opt.file)?;
+    let mut kvs = Kvs::new(opt.file)?;
 
     match opt.cmd {
         SubCommand::Put { key, value } => {
-            kvs.put(key, value.into())?;
+            kvs.put::<_, String>(key, value)?;
         }
         SubCommand::Get { key } => {
-            let value = kvs.get(key)?;
-            println!("{}", String::from_utf8_lossy(value.as_slice()));
+            println!("{}", kvs.get::<String>(key.as_str())?);
         }
         SubCommand::Delete { key } => {
-            if let Some(value) = kvs.delete(key)? {
-                println!("{}", String::from_utf8_lossy(value.as_slice()));
+            if let Some(value) = kvs.delete::<String>(&key)? {
+                println!("{}", value);
             }
             println!("Successfully deleted");
         }
