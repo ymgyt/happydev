@@ -114,7 +114,7 @@ impl Kvs<fs::File> {
                 Ok(_) => (),
                 Err(err) => match err.kind() {
                     io::ErrorKind::AlreadyExists => (),
-                    _ => return Err(KvsError::from(err)),
+                    _ => return Err(err.into()),
                 },
             }
         }
@@ -144,6 +144,8 @@ mod tests {
     use std::io::{Cursor, Seek};
     use std::result::Result as StdResult;
 
+    type InMemoryKvs = Kvs<Cursor<Vec<u8>>>;
+
     #[test]
     fn put_and_get() -> StdResult<(), Error> {
         let entries = vec![
@@ -152,8 +154,7 @@ mod tests {
             Entry::new("3", vec![b'3'])?,
         ];
 
-        let cursor = Cursor::new(Vec::new());
-        let mut kvs = Kvs::new(cursor)?;
+        let mut kvs = in_memory_kvs();
 
         entries.iter().for_each(|entry| {
             kvs.put(&entry.key, entry.value.clone()).unwrap();
@@ -163,14 +164,7 @@ mod tests {
         assert_eq!(kvs.get("2")?, vec![b'2']);
         assert_eq!(kvs.get("3")?, vec![b'3']);
 
-        let mut buff = std::iter::repeat(0)
-            .take(kvs.position as usize)
-            .collect::<Vec<u8>>();
-        kvs.dump(&mut buff)?;
-
-        let mut cursor = Cursor::new(buff);
-        cursor.seek(Start(0))?;
-        let mut kvs = Kvs::new(cursor)?;
+        let mut kvs = dump_and_restore(kvs);
         assert_eq!(kvs.get("1")?, vec![b'1']);
         assert_eq!(kvs.get("2")?, vec![b'2']);
         assert_eq!(kvs.get("3")?, vec![b'3']);
@@ -180,7 +174,7 @@ mod tests {
 
     #[test]
     fn delete() -> StdResult<(), Error> {
-        let mut kvs = Kvs::new(Cursor::new(Vec::new()))?;
+        let mut kvs = in_memory_kvs();
         kvs.put("1", vec![b'1'])?;
 
         assert_eq!(kvs.delete("1").unwrap(), Some(vec![b'1']));
@@ -188,16 +182,27 @@ mod tests {
         assert_eq!(kvs.delete("1").unwrap(), None);
 
         // 削除された状態が維持されるか
+        let mut kvs = dump_and_restore(kvs);
+        assert!(kvs.get("1").unwrap_err().is_not_found());
+        assert_eq!(kvs.delete("1").unwrap(), None);
+
+        Ok(())
+    }
+
+    fn in_memory_kvs() -> InMemoryKvs {
+        Kvs::new(Cursor::new(Vec::new())).unwrap()
+    }
+
+    // kvsのfile(buffer)をdumpして再度、kvsを作成しなおす
+    // 既存のfileがある状態でのkvsの利用と同じことをやろうとしている
+    fn dump_and_restore(mut kvs: InMemoryKvs) -> InMemoryKvs {
         let mut buff = std::iter::repeat(0)
             .take(kvs.position as usize)
             .collect::<Vec<u8>>();
-        kvs.dump(&mut buff)?;
+        kvs.dump(&mut buff).unwrap();
 
         let mut cursor = Cursor::new(buff);
-        cursor.seek(Start(0))?;
-        let mut kvs = Kvs::new(cursor)?;
-        assert!(kvs.get("1").unwrap_err().is_not_found());
-
-        Ok(())
+        cursor.seek(Start(0)).unwrap();
+        Kvs::new(cursor).unwrap()
     }
 }
