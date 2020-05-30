@@ -33,14 +33,14 @@ where
     where
         K: Into<String>,
     {
-        self.put_entry(Entry::new(key, value)?)
+        self.put_entry(Entry::new(key, value)?, true)
     }
 
-    fn put_entry(&mut self, entry: Entry) -> Result<()> {
+    fn put_entry(&mut self, entry: Entry, update_index: bool) -> Result<()> {
         let n = entry.encode(&mut self.file)?;
         debug_assert_eq!(entry.len(), n, "decoded bytes does not match");
 
-        if !entry.is_deleted() {
+        if update_index {
             self.index.0.insert(entry.key, self.position as usize);
         }
         self.position += n as u64;
@@ -59,7 +59,6 @@ where
         if let Some(&offset) = self.index.0.get(key) {
             self.file.seek(Start(offset as u64))?;
             let entry = Entry::decode_with_check(&mut self.file)?;
-
             self.file.seek(Start(self.position))?;
             Ok(entry)
         } else {
@@ -84,7 +83,7 @@ where
             Err(err) => return Err(err),
         };
         // persist
-        self.put_entry(entry.mark_delete()?)?;
+        self.put_entry(entry.mark_delete()?, false)?;
 
         // remove from index
         self.index.0.remove(key);
