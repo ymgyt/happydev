@@ -32,19 +32,14 @@ impl TaskHandler {
         req: Request<Body>,
         kvs: &mut Kvs,
     ) -> Result<Response<Body>, anyhow::Error> {
-        // kvsへの参照をにぎっていると&mutとれないので一度keysの所有権を奪う
-        let keys: Vec<String> = kvs.keys().cloned().collect();
-        let mut tasks: Vec<entity::task::Task> = keys
-            .iter()
-            .map(|key| kvs.get::<entity::task::Task>(key))
-            .inspect(|result| {
-                if let Err(err) = result {
-                    warn!("{}", err);
-                }
-            })
-            .flatten()
-            .collect();
+        let mut tasks: Vec<Task> = kvs
+            .iter::<Task>()
+            // kvsにはtask以外も格納されている可能性があるので、serialize error(=他のdata)と判断して無視する
+            // ただし、その他のエラーは握りつぶさないようにする
+            .filter(|r| r.is_ok() || !r.as_ref().unwrap_err().is_serialize())
+            .collect::<Result<Vec<Task>, _>>()?;
 
+        // filter
         let query: HashMap<Cow<str>, Cow<str>> = req
             .uri()
             .query()
