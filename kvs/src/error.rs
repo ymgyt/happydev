@@ -51,6 +51,13 @@ impl KvsError {
             _ => false,
         }
     }
+
+    pub fn is_serialize(&self) -> bool {
+        match self {
+            KvsError::Serialize { .. } => true,
+            _ => false,
+        }
+    }
 }
 
 // IDEがmismatch typeを出して煩わしいので自分で書いておく
