@@ -122,8 +122,9 @@ impl TaskHandler {
                 Some(task) => serde_json::to_vec(&task)
                     .map(|serialized| Response::new(Body::from(serialized)))
                     .map_err(anyhow::Error::from),
+                // 最初は削除対象がなくてもOKにしていたが、バグだと気づかなったのでエラーにする
                 None => Response::builder()
-                    .status(StatusCode::NO_CONTENT)
+                    .status(StatusCode::NOT_FOUND)
                     .body(Body::empty())
                     .map_err(anyhow::Error::from),
             })
