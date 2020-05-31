@@ -38,7 +38,7 @@ impl Kvs {
         Engine::new(file).map(|engine| Self { engine })
     }
 
-    pub fn put<K, T>(&mut self, key: K, value: T) -> Result<()>
+    pub fn put<K, T>(&mut self, key: K, value: &T) -> Result<()>
     where
         K: Into<String>,
         T: serde::Serialize + serde::de::DeserializeOwned,
@@ -67,5 +67,9 @@ impl Kvs {
             )),
             None => Ok(None),
         })
+    }
+
+    pub fn keys(&self) -> crate::Keys<'_> {
+        self.engine.keys()
     }
 }

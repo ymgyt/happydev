@@ -3,6 +3,7 @@ mod entry;
 mod error;
 mod store;
 
+pub use engine::Keys;
 pub use error::KvsError;
 pub use store::Kvs;
 

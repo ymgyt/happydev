@@ -3,7 +3,10 @@ use crate::{
     error::KvsError,
     Result,
 };
-use std::io::{Read, Seek, SeekFrom::*, Write};
+use std::{
+    collections,
+    io::{Read, Seek, SeekFrom::*, Write},
+};
 
 pub struct Engine<F> {
     file: F,
@@ -64,7 +67,7 @@ where
 
     // If the key exists, it returns the deleted value.
     // Return None if it does not exist.
-    pub fn delete<K>(&mut self, key: K) -> Result<Option<Vec<u8>>>
+    pub(crate) fn delete<K>(&mut self, key: K) -> Result<Option<Vec<u8>>>
     where
         K: AsRef<str>,
     {
@@ -86,11 +89,29 @@ where
         Ok(Some(entry))
     }
 
+    pub(crate) fn keys(&self) -> Keys<'_> {
+        Keys {
+            inner: self.index.0.iter(),
+        }
+    }
+
     #[cfg(test)]
     fn dump(&mut self, buf: &mut [u8]) -> Result<()> {
         self.file.seek(Start(0))?;
         self.file.read_exact(buf)?;
         Ok(())
+    }
+}
+
+pub struct Keys<'a> {
+    inner: collections::hash_map::Iter<'a, String, usize>,
+}
+
+impl<'a> Iterator for Keys<'a> {
+    type Item = &'a String;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|(key, _)| key)
     }
 }
 
@@ -143,6 +164,23 @@ mod tests {
         let mut kvs = dump_and_restore(kvs);
         assert!(kvs.get("1").unwrap_err().is_not_found());
         assert_eq!(kvs.delete("1").unwrap(), None);
+
+        Ok(())
+    }
+
+    #[test]
+    fn keys() -> StdResult<(), Error> {
+        let mut kvs = in_memory_kvs();
+
+        kvs.put("1", vec![b'1'])?;
+        kvs.put("2", vec![b'2'])?;
+
+        let mut v = Vec::<String>::new();
+        kvs.keys().for_each(|key| {
+            v.push(key.clone());
+        });
+        v.sort();
+        assert_eq!(v, vec!["1", "2"]);
 
         Ok(())
     }
