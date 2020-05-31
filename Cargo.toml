@@ -2,5 +2,6 @@
 
 members = [
     "happydev-ci",
-    "todo"
+    "todo",
+    "kvs",
 ]

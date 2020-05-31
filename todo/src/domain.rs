@@ -49,6 +49,12 @@ pub mod vo {
         pub fn new() -> Self {
             Self(Uuid::new_v4())
         }
+
+        pub fn to_string(&self) -> String {
+            let mut buff = vec![0_u8; uuid::adapter::SimpleRef::LENGTH];
+            self.0.to_simple_ref().encode_lower(buff.as_mut_slice());
+            String::from_utf8(buff).expect("Task uuid to valid utf8")
+        }
     }
 
     // clippyに怒られたので定義しておく
@@ -77,6 +83,15 @@ pub mod vo {
     impl Default for Category {
         fn default() -> Self {
             Category(String::from("default"))
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        #[test]
+        fn task_id_to_string() {
+            TaskId::new().to_string();
         }
     }
 }

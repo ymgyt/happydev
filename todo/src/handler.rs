@@ -1,10 +1,7 @@
-use crate::{
-    domain::{entity, vo},
-    prelude::*,
-    state,
-};
+use crate::{domain::entity, prelude::*};
 use hyper::body::Buf;
 use hyper::{Body, Request, Response, StatusCode};
+use kvs::Kvs;
 use serde::Serialize;
 use std::{borrow::Cow, collections::HashMap};
 
@@ -21,8 +18,8 @@ pub fn healthz() -> Result<Response<Body>, anyhow::Error> {
 pub struct TaskHandler {}
 
 #[derive(Serialize)]
-pub struct GetTasksResponse<'a, 'b> {
-    tasks: &'a [&'b entity::task::Task],
+pub struct GetTasksResponse {
+    tasks: Vec<entity::task::Task>,
 }
 
 impl TaskHandler {
@@ -30,42 +27,44 @@ impl TaskHandler {
         Self {}
     }
 
-    // taskの取得
     pub fn get_tasks(
         &self,
         req: Request<Body>,
-        tasks: &[entity::task::Task],
+        kvs: &mut Kvs,
     ) -> Result<Response<Body>, anyhow::Error> {
+        // kvsへの参照をにぎっていると&mutとれないので一度keysの所有権を奪う
+        let keys: Vec<String> = kvs.keys().cloned().collect();
+        let mut tasks: Vec<entity::task::Task> = keys
+            .iter()
+            .map(|key| kvs.get::<entity::task::Task>(key))
+            .inspect(|result| {
+                if let Err(err) = result {
+                    warn!("{}", err);
+                }
+            })
+            .flatten()
+            .collect();
+
         let query: HashMap<Cow<str>, Cow<str>> = req
             .uri()
             .query()
             .map(|q| url::form_urlencoded::parse(q.as_bytes()).collect())
             .unwrap_or_default();
-
-        // queryによる検索
-        let tasks: Vec<&entity::task::Task> = if let Some(query) = query.get("query") {
-            // とりあえずtitle決め打ちの検索をおこなう
+        if let Some(query) = query.get("query") {
             let query = query.to_ascii_lowercase();
-            tasks
-                .iter()
-                .filter(|&task| task.title().to_ascii_lowercase().contains(query.as_str()))
-                .collect()
-        } else {
-            tasks.iter().map(|task| task).collect()
-        };
+            tasks.retain(|task| task.title().to_ascii_lowercase().contains(query.as_str()));
+        }
 
-        serde_json::to_vec(&GetTasksResponse {
-            tasks: tasks.as_slice(),
-        })
-        .map_err(anyhow::Error::from)
-        .and_then(|v| Ok(Response::new(Body::from(v))))
+        serde_json::to_vec(&GetTasksResponse { tasks })
+            .map_err(anyhow::Error::from)
+            .map(|json| Response::new(Body::from(json)))
     }
 
     // taskの作成
     pub async fn create_task(
         &self,
         req: Request<Body>,
-        tasks: &mut state::Tasks,
+        kvs: &mut Kvs,
     ) -> Result<Response<Body>, anyhow::Error> {
         // TODO: read body then acquire lock
         let create_cmd = serde_json::from_slice::<entity::task::CreateCommand>(
@@ -75,11 +74,10 @@ impl TaskHandler {
         let task = entity::task::Task::create(create_cmd)?;
         info!(?task, "Create new task");
 
+        kvs.put(task.id().to_string(), &task)?;
+
         serde_json::to_vec(&task)
-            .and_then(|serialized| {
-                tasks.push(task);
-                Ok(Response::new(Body::from(serialized)))
-            })
+            .map(|serialized| Response::new(Body::from(serialized)))
             .map_err(anyhow::Error::from)
     }
 
@@ -87,24 +85,27 @@ impl TaskHandler {
     pub fn delete_task(
         &self,
         req: Request<Body>,
-        tasks: &mut state::Tasks,
+        kvs: &mut Kvs,
     ) -> Result<Response<Body>, anyhow::Error> {
-        // tasks/{uuid} というpathを想定
+        // /tasks/{uuid} というpathを想定
         req.uri()
             .path()
             .split('/')
             .nth(2)
             .ok_or_else(|| anyhow::anyhow!("task id not found in path"))
-            .and_then(|task_id: &str| task_id.parse::<vo::TaskId>())
-            .map(|delete_id| {
+            .and_then(|delete_id| {
                 info!("Delete task: {:?}", delete_id);
-                tasks.retain(|task| task.id().ne(&delete_id))
+                kvs.delete::<entity::task::Task>(delete_id)
+                    .map_err(anyhow::Error::from)
             })
-            .and_then(|_| {
-                Response::builder()
+            .and_then(|opt: Option<entity::task::Task>| match opt {
+                Some(task) => serde_json::to_vec(&task)
+                    .map(|serialized| Response::new(Body::from(serialized)))
+                    .map_err(anyhow::Error::from),
+                None => Response::builder()
                     .status(StatusCode::NO_CONTENT)
                     .body(Body::empty())
-                    .map_err(anyhow::Error::from)
+                    .map_err(anyhow::Error::from),
             })
     }
 }

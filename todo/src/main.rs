@@ -24,7 +24,7 @@ async fn main() {
 
     let addr = SocketAddr::from(([0, 0, 0, 0], config::port()));
 
-    let state = state::State::shared();
+    let state = state::State::shared().expect("Init app state");
 
     let server = Server::bind(&addr)
         .serve(make_service_fn(move |_| {

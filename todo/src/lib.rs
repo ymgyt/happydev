@@ -6,9 +6,10 @@ pub mod prelude {
 }
 
 pub mod config {
+    use std::{env, path};
     // http serverのport番号
     pub fn port() -> u16 {
-        std::env::var("TODO_PORT")
+        env::var("TODO_PORT")
             .expect("TODO_PORT required")
             .parse::<u16>()
             .unwrap()
@@ -16,12 +17,21 @@ pub mod config {
 
     // loggingのfilter directive
     pub fn log_filter() -> String {
-        std::env::var("TODO_LOG").unwrap_or_else(|_| "todo=info".to_owned())
+        env::var("TODO_LOG").unwrap_or_else(|_| "todo=info".to_owned())
     }
 
     // アクセスを許可するOrigin(frontのjsをserveしたドメイン)
     pub fn cors_allowed_origins() -> [&'static str; 2] {
         ["localhost", "todo.ymgyt.io"]
+    }
+
+    // kvsの格納file
+    pub fn kvs_file_path() -> path::PathBuf {
+        use std::str::FromStr;
+        env::var("TODO_KVS")
+            .map(path::PathBuf::from)
+            .or(path::PathBuf::from_str("./todo.kvs"))
+            .expect("Get kvs file path")
     }
 }
 
@@ -29,43 +39,33 @@ pub mod config {
 // 基本的にはexternal serviceのconnectionとかを保持する想定
 // 今はstorage層を組み込んでないので、in memoryに全部もっている
 pub mod state {
-    use crate::domain::{entity::task, vo};
+    use crate::config;
+    use kvs::Kvs;
     use std::sync::Arc;
     use tokio::sync::RwLock;
-
-    // in memory tasks
-    pub type Tasks = Vec<task::Task>;
 
     // app state
     #[derive(Default)]
     pub struct State {
-        pub tasks: RwLock<Tasks>,
+        // tokio::sync::RwLockがDefaultの実装を要求するのでOptionでWrapしている
+        pub kvs: RwLock<Option<Kvs>>,
     }
 
     pub type SharedState = Arc<State>;
 
     impl State {
-        pub fn shared() -> SharedState {
-            Arc::new(State::new())
+        pub fn shared() -> Result<SharedState, anyhow::Error> {
+            Ok(Arc::new(State::new()?))
         }
 
-        fn new() -> Self {
-            let mut tasks = Vec::new();
+        fn new() -> Result<Self, anyhow::Error> {
+            Ok(Self {
+                kvs: RwLock::new(Some(State::kvs()?)),
+            })
+        }
 
-            // dummyの初期状態を作成する
-            for i in 0..5 {
-                let t = task::Task::create(task::CreateCommand {
-                    title: format!("task {}", i + 1),
-                    category: vo::Category::default(),
-                    content: "content...".to_string(),
-                })
-                .expect("Create task");
-                tasks.push(t);
-            }
-
-            Self {
-                tasks: RwLock::new(tasks),
-            }
+        fn kvs() -> Result<Kvs, anyhow::Error> {
+            Kvs::new(config::kvs_file_path().as_path()).map_err(anyhow::Error::from)
         }
     }
 }
@@ -155,16 +155,18 @@ pub mod router {
                 let task_handler = handler::TaskHandler::new();
                 match *method {
                     Method::GET => {
-                        let tasks = state.tasks.read().await;
-                        task_handler.get_tasks(req, &tasks)
+                        let mut kvs = state.kvs.write().await;
+                        task_handler.get_tasks(req, &mut kvs.as_mut().unwrap())
                     }
                     Method::POST => {
-                        let mut tasks = state.tasks.write().await;
-                        task_handler.create_task(req, &mut tasks).await
+                        let mut kvs = state.kvs.write().await;
+                        task_handler
+                            .create_task(req, &mut kvs.as_mut().unwrap())
+                            .await
                     }
                     Method::DELETE => {
-                        let mut tasks = state.tasks.write().await;
-                        task_handler.delete_task(req, &mut tasks)
+                        let mut kvs = state.kvs.write().await;
+                        task_handler.delete_task(req, &mut kvs.as_mut().unwrap())
                     }
                     _ => handler::not_found(),
                 }
