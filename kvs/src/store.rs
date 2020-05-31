@@ -38,12 +38,12 @@ impl Kvs {
         Engine::new(file).map(|engine| Self { engine })
     }
 
-    pub fn put<K, T>(&mut self, key: K, value: &T) -> Result<()>
+    pub fn put<K, T: ?Sized>(&mut self, key: K, value: &T) -> Result<()>
     where
         K: Into<String>,
         T: serde::Serialize + serde::de::DeserializeOwned,
     {
-        bincode::serialize(&value)
+        bincode::serialize(value)
             .map_err(KvsError::from)
             .and_then(|bytes| self.engine.put(key, bytes))
     }
