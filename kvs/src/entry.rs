@@ -23,7 +23,6 @@ impl TryFrom<u8> for State {
 
 #[derive(PartialEq, Clone)]
 pub(crate) struct Entry {
-    checksum: u32,
     header: Header,
     pub(crate) key: String,
     pub(crate) value: Vec<u8>,
@@ -31,13 +30,15 @@ pub(crate) struct Entry {
 
 #[derive(PartialEq, Clone)]
 struct Header {
+    checksum: u32,
     state: State,
     key_len: u16,
     value_len: u32,
 }
 
 impl Header {
-    const LEN: usize = 1 + 2 + 4; // state(1) + key_ley(2) + value_len(4)
+    const LEN: usize = 4 + 1 + 2 + 4; // checksum(4) + state(1) + key_ley(2) + value_len(4)
+    const LEN_WITHOUT_CHECKSUM: usize = Header::LEN - 4;
 }
 
 impl Entry {
@@ -47,8 +48,8 @@ impl Entry {
 
     fn new_with_state(key: String, value: Vec<u8>, state: State) -> Result<Self> {
         let mut e = Entry {
-            checksum: 0,
             header: Header {
+                checksum: 0,
                 state,
                 key_len: key.len() as u16,     // TODO check
                 value_len: value.len() as u32, // TODO check
@@ -56,7 +57,7 @@ impl Entry {
             key,
             value,
         };
-        e.checksum = e.calc_checksum()?;
+        e.header.checksum = e.calc_checksum()?;
 
         Ok(e)
     }
@@ -70,12 +71,12 @@ impl Entry {
     }
 
     pub(crate) fn encode<W: WriteBytesExt>(&self, mut w: W) -> Result<usize> {
-        w.write_u32::<BE>(self.checksum)?;
+        w.write_u32::<BE>(self.header.checksum)?;
         w.write_u8(self.header.state as u8)?;
         w.write_u16::<BE>(self.header.key_len)?;
         w.write_u32::<BE>(self.header.value_len)?;
 
-        let mut n: usize = 4 + Header::LEN;
+        let mut n: usize = Header::LEN;
         n += w.write(self.key.as_bytes())?;
         n += w.write(self.value.as_slice())?;
 
@@ -83,7 +84,7 @@ impl Entry {
     }
     pub(crate) fn decode_with_check<R: ReadBytesExt>(r: R) -> Result<Self> {
         Entry::decode(r).and_then(|entry| {
-            if entry.checksum != entry.calc_checksum()? {
+            if entry.header.checksum != entry.calc_checksum()? {
                 Err(KvsError::CorruptData)
             } else {
                 Ok(entry)
@@ -104,8 +105,8 @@ impl Entry {
         r.by_ref().take(value_len as u64).read_to_end(&mut value)?;
 
         Ok(Entry {
-            checksum,
             header: Header {
+                checksum,
                 state,
                 key_len,
                 value_len,
@@ -116,12 +117,12 @@ impl Entry {
     }
 
     pub(crate) fn len(&self) -> usize {
-        4 + Header::LEN + self.key.len() + self.value.len()
+        Header::LEN + self.key.len() + self.value.len()
     }
 
     fn calc_checksum(&self) -> Result<u32> {
         let mut h = crc32fast::Hasher::new();
-        let mut buff = Vec::with_capacity(Header::LEN);
+        let mut buff = Vec::with_capacity(Header::LEN_WITHOUT_CHECKSUM);
         buff.write_u8(self.header.state as u8)?;
         buff.write_u16::<BE>(self.header.key_len)?;
         buff.write_u32::<BE>(self.header.value_len)?;
@@ -138,7 +139,7 @@ impl fmt::Debug for Entry {
             f,
             "|crc32: {}|state: {:?}|key_len: {}|value_len: {}|\
                 key: {}|value: {}|",
-            self.checksum,
+            self.header.checksum,
             self.header.state,
             self.header.key_len,
             self.header.value_len,
