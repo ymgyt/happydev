@@ -60,8 +60,8 @@ pub mod vo {
         }
 
         pub fn to_string(&self) -> String {
-            let mut buff = vec![0_u8; uuid::adapter::SimpleRef::LENGTH];
-            self.0.to_simple_ref().encode_lower(buff.as_mut_slice());
+            let mut buff = vec![0_u8; uuid::adapter::HyphenatedRef::LENGTH];
+            self.0.to_hyphenated_ref().encode_lower(buff.as_mut_slice());
             String::from_utf8(buff).expect("Task uuid to valid utf8")
         }
     }
