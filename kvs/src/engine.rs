@@ -13,6 +13,7 @@ pub struct Engine<F> {
     file: F,
     index: entry::KeyIndex,
     position: u64,
+    // entryをdecodeする際に利用するBufReaderのbuffer sizeに利用する
     last_entry_len: usize,
 }
 
@@ -136,8 +137,8 @@ mod tests {
     fn put_and_get() -> StdResult<(), Error> {
         let entries = vec![
             Entry::new("1", vec![b'1'])?,
-            Entry::new("2", vec![b'2'])?,
-            Entry::new("3", vec![b'3'])?,
+            Entry::new("2", vec![b'2', b'2'])?,
+            Entry::new("3", vec![b'3', b'3', b'3'])?,
         ];
 
         let mut kvs = in_memory_kvs();
@@ -147,13 +148,13 @@ mod tests {
         });
 
         assert_eq!(kvs.get("1")?, vec![b'1']);
-        assert_eq!(kvs.get("2")?, vec![b'2']);
-        assert_eq!(kvs.get("3")?, vec![b'3']);
+        assert_eq!(kvs.get("2")?, vec![b'2', b'2']);
+        assert_eq!(kvs.get("3")?, vec![b'3', b'3', b'3']);
 
         let mut kvs = dump_and_restore(kvs);
         assert_eq!(kvs.get("1")?, vec![b'1']);
-        assert_eq!(kvs.get("2")?, vec![b'2']);
-        assert_eq!(kvs.get("3")?, vec![b'3']);
+        assert_eq!(kvs.get("2")?, vec![b'2', b'2']);
+        assert_eq!(kvs.get("3")?, vec![b'3', b'3', b'3']);
 
         Ok(())
     }
