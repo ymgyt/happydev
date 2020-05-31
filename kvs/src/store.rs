@@ -101,9 +101,6 @@ where
     type Item = Result<De>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.inner.next() {
-            Some(key) => Some(self.kvs.get::<De>(&key)),
-            None => None,
-        }
+        self.inner.next().map(|key| self.kvs.get::<De>(&key))
     }
 }
