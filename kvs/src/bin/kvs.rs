@@ -55,7 +55,7 @@ fn run() -> Result<(), anyhow::Error> {
 
     match opt.cmd {
         SubCommand::Put { key, value } => {
-            kvs.put::<_, String>(key, value)?;
+            kvs.put::<_, String>(key, &value)?;
         }
         SubCommand::Get { key } => {
             println!("{}", kvs.get::<String>(key.as_str())?);
