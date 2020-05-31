@@ -72,4 +72,38 @@ impl Kvs {
     pub fn keys(&self) -> crate::Keys<'_> {
         self.engine.keys()
     }
+
+    pub fn iter<De>(&mut self) -> Iter<'_, De>
+    where
+        De: serde::Serialize + serde::de::DeserializeOwned,
+    {
+        let keys = self.keys().cloned().collect::<Vec<String>>();
+        Iter {
+            kvs: self,
+            inner: keys.into_iter(),
+            phantom: PhantomData,
+        }
+    }
+}
+
+pub struct Iter<'a, De> {
+    kvs: &'a mut Kvs,
+    inner: std::vec::IntoIter<String>,
+    phantom: PhantomData<*const De>,
+}
+
+use std::marker::PhantomData;
+
+impl<'a, De> Iterator for Iter<'a, De>
+where
+    De: serde::Serialize + serde::de::DeserializeOwned,
+{
+    type Item = Result<De>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.inner.next() {
+            Some(key) => Some(self.kvs.get::<De>(&key)),
+            None => None,
+        }
+    }
 }
