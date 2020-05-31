@@ -1,6 +1,7 @@
 pub mod entity {
     pub mod task {
         use crate::domain::vo;
+        use chrono::{DateTime, Utc};
         use serde::{Deserialize, Serialize};
 
         #[derive(Debug, Serialize, Deserialize)]
@@ -9,6 +10,8 @@ pub mod entity {
             title: String,
             category: vo::Category,
             content: String,
+            created_at: DateTime<Utc>,
+            updated_at: DateTime<Utc>,
         }
 
         #[derive(Deserialize, Debug)]
@@ -20,11 +23,14 @@ pub mod entity {
 
         impl Task {
             pub fn create(cmd: CreateCommand) -> Result<Self, anyhow::Error> {
+                let now = Utc::now();
                 Ok(Self {
                     id: vo::TaskId::new(),
                     title: cmd.title,
                     category: cmd.category,
                     content: cmd.content,
+                    created_at: now,
+                    updated_at: now,
                 })
             }
             pub fn id(&self) -> vo::TaskId {
@@ -32,6 +38,9 @@ pub mod entity {
             }
             pub fn title(&self) -> &str {
                 self.title.as_ref()
+            }
+            pub fn created_at(&self) -> DateTime<Utc> {
+                self.created_at
             }
         }
     }

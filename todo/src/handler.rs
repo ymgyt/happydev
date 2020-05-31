@@ -1,9 +1,16 @@
-use crate::{domain::entity, prelude::*};
+use crate::{
+    domain::entity::task::{self, Task},
+    prelude::*,
+};
 use hyper::body::Buf;
 use hyper::{Body, Request, Response, StatusCode};
 use kvs::Kvs;
 use serde::Serialize;
-use std::{borrow::Cow, collections::HashMap};
+use std::{
+    borrow::{Borrow, Cow},
+    cmp::Reverse,
+    collections::HashMap,
+};
 
 pub fn not_found() -> Result<Response<Body>, anyhow::Error> {
     let mut not_found = Response::default();
@@ -19,7 +26,7 @@ pub struct TaskHandler {}
 
 #[derive(Serialize)]
 pub struct GetTasksResponse {
-    tasks: Vec<entity::task::Task>,
+    tasks: Vec<Task>,
 }
 
 impl TaskHandler {
@@ -50,6 +57,25 @@ impl TaskHandler {
             tasks.retain(|task| task.title().to_ascii_lowercase().contains(query.as_str()));
         }
 
+        // sort
+        if let Some(order) = query.get("order") {
+            // TODO: Query struct的なものを作る
+            let asc: bool = match query.get("asc") {
+                Some(asc) => asc.parse().unwrap_or(true),
+                None => true,
+            };
+            match order.borrow() {
+                "created_at" => {
+                    if asc {
+                        tasks.sort_unstable_by_key(|t| t.created_at());
+                    } else {
+                        tasks.sort_unstable_by_key(|t| Reverse(t.created_at()));
+                    }
+                }
+                _ => tasks.sort_unstable_by_key(|t| t.created_at()),
+            };
+        }
+
         serde_json::to_vec(&GetTasksResponse { tasks })
             .map_err(anyhow::Error::from)
             .map(|json| Response::new(Body::from(json)))
@@ -62,11 +88,11 @@ impl TaskHandler {
         kvs: &mut Kvs,
     ) -> Result<Response<Body>, anyhow::Error> {
         // TODO: read body then acquire lock
-        let create_cmd = serde_json::from_slice::<entity::task::CreateCommand>(
+        let create_cmd = serde_json::from_slice::<task::CreateCommand>(
             hyper::body::to_bytes(req.into_body()).await?.bytes(),
         )?;
         // TODO: map err to bad request(404)
-        let task = entity::task::Task::create(create_cmd)?;
+        let task = Task::create(create_cmd)?;
         info!(?task, "Create new task");
 
         kvs.put(task.id().to_string(), &task)?;
@@ -90,10 +116,9 @@ impl TaskHandler {
             .ok_or_else(|| anyhow::anyhow!("task id not found in path"))
             .and_then(|delete_id| {
                 info!("Delete task: {:?}", delete_id);
-                kvs.delete::<entity::task::Task>(delete_id)
-                    .map_err(anyhow::Error::from)
+                kvs.delete::<Task>(delete_id).map_err(anyhow::Error::from)
             })
-            .and_then(|opt: Option<entity::task::Task>| match opt {
+            .and_then(|opt: Option<Task>| match opt {
                 Some(task) => serde_json::to_vec(&task)
                     .map(|serialized| Response::new(Body::from(serialized)))
                     .map_err(anyhow::Error::from),
