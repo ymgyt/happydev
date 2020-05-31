@@ -1,6 +1,11 @@
 use crate::{error::KvsError, Result};
 use byteorder::{ReadBytesExt, WriteBytesExt, BE};
-use std::{collections::HashMap, convert::TryFrom, fmt, io::Read};
+use std::{
+    collections::HashMap,
+    convert::TryFrom,
+    fmt,
+    io::{BufReader, Read},
+};
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -98,11 +103,12 @@ impl Entry {
         let key_len = r.read_u16::<BE>()?;
         let value_len = r.read_u32::<BE>()?;
 
-        let mut key = String::with_capacity(key_len as usize);
-        r.by_ref().take(key_len as u64).read_to_string(&mut key)?;
+        let data_len = key_len as usize + value_len as usize;
+        let mut key_value = Vec::with_capacity(data_len);
+        r.take(data_len as u64).read_to_end(&mut key_value)?;
 
-        let mut value = Vec::with_capacity(value_len as usize);
-        r.by_ref().take(value_len as u64).read_to_end(&mut value)?;
+        let value = key_value.split_off(key_len as usize);
+        let key = String::from_utf8(key_value).map_err(|err| KvsError::from(err.utf8_error()))?;
 
         Ok(Entry {
             header: Header {
@@ -153,7 +159,8 @@ impl fmt::Debug for Entry {
 pub(crate) struct KeyIndex(pub HashMap<String, usize>);
 
 impl KeyIndex {
-    pub(crate) fn construct_from<R: Read>(mut r: R) -> Result<Self> {
+    pub(crate) fn construct_from<R: Read>(r: R) -> Result<Self> {
+        let mut r = BufReader::new(r);
         let mut h = HashMap::new();
         let mut position = 0;
         let err = loop {

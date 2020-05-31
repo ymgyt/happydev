@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, str};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -23,6 +23,8 @@ pub enum KvsError {
     NotFound,
     #[error("crc does not match")]
     CorruptData,
+    #[error("invalid key {}", .source)]
+    InvalidKey { source: std::str::Utf8Error },
     #[error("unknown err")]
     Unknown,
 }
@@ -48,5 +50,12 @@ impl KvsError {
             KvsError::CorruptData => true,
             _ => false,
         }
+    }
+}
+
+// IDEがmismatch typeを出して煩わしいので自分で書いておく
+impl From<str::Utf8Error> for KvsError {
+    fn from(err: str::Utf8Error) -> Self {
+        KvsError::InvalidKey { source: err }
     }
 }

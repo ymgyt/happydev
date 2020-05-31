@@ -23,10 +23,10 @@ fn cli_put_get_delete() -> Result<(), anyhow::Error> {
     let tmp_path = tmp_dir.path().join("test.kvs");
     let mut kvs = Kvs::new(tmp_path)?;
 
-    kvs.put("key1", "value1X".to_owned())?;
+    kvs.put::<_, String>("key1", &"value1X".to_owned())?;
     assert_eq!(kvs.get::<String>("key1")?, "value1X".to_owned());
 
-    kvs.put("key1", "value1Y".to_owned())?;
+    kvs.put::<_, String>("key1", &"value1Y".to_owned())?;
     assert_eq!(kvs.get::<String>("key1")?, "value1Y".to_owned());
 
     assert!(kvs.get::<String>("not-exist").unwrap_err().is_not_found());

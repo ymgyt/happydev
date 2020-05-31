@@ -3,15 +3,17 @@ use crate::{
     error::KvsError,
     Result,
 };
+use std::io::BufReader;
 use std::{
     collections,
-    io::{Read, Seek, SeekFrom::*, Write},
+    io::{BufWriter, Read, Seek, SeekFrom::*, Write},
 };
 
 pub struct Engine<F> {
     file: F,
     index: entry::KeyIndex,
     position: u64,
+    last_entry_len: usize,
 }
 
 impl<F> Engine<F>
@@ -25,6 +27,7 @@ where
             file,
             index,
             position,
+            last_entry_len: 0,
         })
     }
 
@@ -36,7 +39,9 @@ where
     }
 
     fn put_entry(&mut self, entry: Entry, update_index: bool) -> Result<()> {
-        let n = entry.encode(&mut self.file)?;
+        let mut w = BufWriter::with_capacity(entry.len(), &mut self.file);
+        let n = entry.encode(&mut w)?;
+        w.flush()?;
         debug_assert_eq!(entry.len(), n, "decoded bytes does not match");
 
         if update_index {
@@ -57,8 +62,10 @@ where
     fn get_entry(&mut self, key: &str) -> Result<Entry> {
         if let Some(&offset) = self.index.0.get(key) {
             self.file.seek(Start(offset as u64))?;
-            let entry = Entry::decode_with_check(&mut self.file)?;
-            self.file.seek(Start(self.position))?;
+            let mut r = BufReader::with_capacity(self.last_entry_len, &mut self.file);
+            let entry = Entry::decode_with_check(&mut r)?;
+            r.seek(Start(self.position))?;
+            self.last_entry_len = entry.len();
             Ok(entry)
         } else {
             Err(KvsError::NotFound)
