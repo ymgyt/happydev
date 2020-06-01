@@ -1,3 +1,5 @@
+mod server;
+
 use kvs::{Kvs, KvsError};
 use std::path::PathBuf;
 use structopt::{clap, StructOpt};
@@ -21,7 +23,7 @@ pub struct Opt {
         env = "KVS_FILE",
         default_value = ".data.kvs"
     )]
-    pub file: PathBuf,
+    pub file: PathBuf, // server commandでは無効にしたい
 
     #[structopt(subcommand)]
     pub cmd: SubCommand,
@@ -46,6 +48,17 @@ pub enum SubCommand {
         #[structopt(help = "key")]
         key: String,
     },
+
+    #[structopt(about = "Server mode.")]
+    Server {
+        #[structopt(
+            long = "addr",
+            help = "tcp bind address.",
+            env = "KVS_ADDR",
+            default_value = "0.0.0.0:4002"
+        )]
+        addr: String,
+    },
 }
 
 fn run() -> Result<(), anyhow::Error> {
@@ -65,6 +78,9 @@ fn run() -> Result<(), anyhow::Error> {
                 println!("{}", value);
             }
             println!("Successfully deleted");
+        }
+        SubCommand::Server { addr, .. } => {
+            server::main(addr);
         }
     }
 

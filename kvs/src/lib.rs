@@ -1,10 +1,13 @@
 mod engine;
 mod entry;
 mod error;
+mod protocol;
+mod server;
 mod store;
 
 pub use engine::Keys;
 pub use error::KvsError;
+pub use server::Server;
 pub use store::Kvs;
 
 const MAX_KEY_BYTES: u16 = std::u16::MAX;
