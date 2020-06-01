@@ -1,6 +1,4 @@
-mod server;
-
-use kvs::{Kvs, KvsError};
+use kvs::{Kvs, KvsError,cli};
 use std::path::PathBuf;
 use structopt::{clap, StructOpt};
 
@@ -80,7 +78,7 @@ fn run() -> Result<(), anyhow::Error> {
             println!("Successfully deleted");
         }
         SubCommand::Server { addr, .. } => {
-            server::main(addr);
+            cli::server::server_main(addr);
         }
     }
 

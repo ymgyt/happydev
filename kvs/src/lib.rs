@@ -4,6 +4,7 @@ mod error;
 mod protocol;
 mod server;
 mod store;
+pub mod cli;
 
 pub use engine::Keys;
 pub use error::KvsError;
