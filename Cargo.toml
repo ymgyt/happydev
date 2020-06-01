@@ -1,7 +1,0 @@
-[workspace]
-
-members = [
-    "happydev-ci",
-    "todo",
-    "kvs",
-]
