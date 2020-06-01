@@ -57,6 +57,17 @@ pub enum SubCommand {
         )]
         addr: String,
     },
+
+    #[structopt(about = "Client mode.")]
+    Client {
+        #[structopt(
+        long = "addr",
+        help = "tcp bind address.",
+        env = "KVS_ADDR",
+        default_value = "0.0.0.0:4002"
+        )]
+        addr: String,
+    }
 }
 
 fn run() -> Result<(), anyhow::Error> {
@@ -79,6 +90,9 @@ fn run() -> Result<(), anyhow::Error> {
         }
         SubCommand::Server { addr, .. } => {
             cli::server::server_main(addr);
+        }
+        SubCommand::Client { addr, ..} => {
+            cli::client::client_main(addr);
         }
     }
 

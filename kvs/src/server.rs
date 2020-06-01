@@ -17,7 +17,7 @@ impl Server {
         loop {
             match listener.accept().await {
                 Ok((_conn, remote)) => {
-                    info!("Accept new connection {:?}", remote);
+                    info!(?remote, "Accept new connection");
                 }
                 Err(err) => {
                     error!("{:?}", err);
