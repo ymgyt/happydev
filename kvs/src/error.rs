@@ -1,3 +1,4 @@
+use anyhow;
 use std::{io, str};
 use thiserror::Error;
 
@@ -25,13 +26,13 @@ pub enum KvsError {
     CorruptData,
     #[error("invalid key {}", .source)]
     InvalidKey { source: std::str::Utf8Error },
-    #[error("unknown err")]
-    Unknown,
+    #[error(transparent)]
+    Unknown(#[from] anyhow::Error),
 }
 
 impl KvsError {
     pub fn is_eof(&self) -> bool {
-        if let KvsError::Io { source } = self {
+        if let KvsError::Io { source, .. } = self {
             source.kind() == io::ErrorKind::UnexpectedEof
         } else {
             false

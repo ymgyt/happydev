@@ -11,13 +11,13 @@ bincode = "1.2.1"
 thiserror = "1.0.19"
 serde = {version = "1.0.110", features = ["derive"]}
 structopt = {version = "0.3", features = ["wrap_help"], optional = true }
-anyhow = { version = "1.0.31", optional = true }
+anyhow = "1.0.31"
+backtrace = "0.3.48"
 
 [features]
-cli = ["structopt", "anyhow"]
+cli = ["structopt"]
 
 [dev-dependencies]
-anyhow = "1.0.31"
 assert_cmd = "1.0.1"
 predicates = "1.0.4"
 tempdir = "0.3.7"
