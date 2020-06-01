@@ -1,4 +1,4 @@
-use kvs::{Kvs, KvsError,cli};
+use kvs::{cli, Kvs, KvsError};
 use std::path::PathBuf;
 use structopt::{clap, StructOpt};
 

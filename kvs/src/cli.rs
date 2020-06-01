@@ -10,7 +10,9 @@ pub mod server {
                 tracing_subscriber::FmtSubscriber::builder()
                     .with_timer(tracing_subscriber::fmt::time::ChronoLocal::rfc3339())
                     .with_target(true)
-                    .with_env_filter(std::env::var("KVS_LOG").unwrap_or_else(|_| "kvs=info".to_owned()))
+                    .with_env_filter(
+                        std::env::var("KVS_LOG").unwrap_or_else(|_| "kvs=info".to_owned()),
+                    )
                     .init();
 
                 // TODO handle signal
@@ -21,3 +23,5 @@ pub mod server {
             })
     }
 }
+
+pub mod client {}
