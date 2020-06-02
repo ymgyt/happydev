@@ -1,9 +1,10 @@
 pub mod server {
     use crate::Server;
 
-    pub fn server_main(addr: String) -> Result<(), crate::KvsError>{
+    pub fn server_main(addr: String) -> Result<(), crate::KvsError> {
         tokio::runtime::Builder::new()
             .enable_all()
+            .threaded_scheduler()
             .build()
             .unwrap()
             .block_on(async {
@@ -22,9 +23,12 @@ pub mod server {
 }
 
 pub mod client {
-    pub fn client_main(addr: String) -> Result<(), crate::KvsError>{
+    use crate::protocol::message;
+
+    pub fn client_main(addr: String) -> Result<(), crate::KvsError> {
         tokio::runtime::Builder::new()
             .enable_all()
+            .threaded_scheduler()
             .build()
             .unwrap()
             .block_on(async {
@@ -36,8 +40,18 @@ pub mod client {
                     )
                     .init();
 
-                let mut stream =  tokio::net::TcpStream::connect(addr).await?;
-                tracing::info!("Ok!");
+                let stream = tokio::net::TcpStream::connect(&addr).await?;
+                tracing::info!(?addr, "Successfully connected");
+
+                let mut operator = message::Operator::with_stream(stream)?;
+                let echo_request = message::Message::from_payload(message::Payload::EchoRequest {
+                    message: "Hello kvs!".to_owned(),
+                })?;
+                operator.send(echo_request).await?;
+
+                if let message::Payload::EchoResponse { message, .. } = operator.receive().await? {
+                    tracing::info!("Got response from server {}", message);
+                }
                 Ok(())
             })
     }

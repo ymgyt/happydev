@@ -61,13 +61,13 @@ pub enum SubCommand {
     #[structopt(about = "Client mode.")]
     Client {
         #[structopt(
-        long = "addr",
-        help = "tcp bind address.",
-        env = "KVS_ADDR",
-        default_value = "0.0.0.0:4002"
+            long = "addr",
+            help = "tcp bind address.",
+            env = "KVS_ADDR",
+            default_value = "0.0.0.0:4002"
         )]
         addr: String,
-    }
+    },
 }
 
 fn run() -> Result<(), anyhow::Error> {
@@ -88,12 +88,8 @@ fn run() -> Result<(), anyhow::Error> {
             }
             println!("Successfully deleted");
         }
-        SubCommand::Server { addr, .. } => {
-            cli::server::server_main(addr);
-        }
-        SubCommand::Client { addr, ..} => {
-            cli::client::client_main(addr);
-        }
+        SubCommand::Server { addr, .. } => cli::server::server_main(addr)?,
+        SubCommand::Client { addr, .. } => cli::client::client_main(addr)?,
     }
 
     Ok(())
