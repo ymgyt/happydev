@@ -5,7 +5,7 @@ import {Provider} from 'react-redux';
 import store from './store';
 import Layout from "./components/layout/Layout";
 
-const App = () => {
+const App: React.FC<{}> = () => {
 
   React.useEffect(() => {
     console.log("initialize app...", Config);
