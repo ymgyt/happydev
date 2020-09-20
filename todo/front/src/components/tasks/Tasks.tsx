@@ -4,7 +4,7 @@ import Task, {TaskProps} from './Task';
 import AddTask from "./AddTask";
 import AddTaskModal from "./AddTaskModal";
 import {List, Paper} from '@material-ui/core';
-import {fetchTasks, openAddTaskModal, deleteTask,} from '../../actions/taskAction';
+import {fetchTasks, openAddTaskModal, deleteTask,} from 'actions/taskAction';
 
 export interface TasksProps {
   taskState: {
@@ -16,7 +16,7 @@ export interface TasksProps {
   deleteTask: any,
 }
 
-const Tasks: any = (props: TasksProps) => {
+const Tasks: React.FC<TasksProps> = (props: TasksProps) => {
   const {taskState: {tasks, loading}, fetchTasks, openAddTaskModal, deleteTask} = props;
 
   useEffect(() => {

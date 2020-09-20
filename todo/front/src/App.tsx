@@ -9,7 +9,7 @@ const App: React.FC<{}> = () => {
 
   React.useEffect(() => {
     console.log("initialize app...", Config);
-  })
+  },[])
 
   return (
     <Provider store={store}>
