@@ -8,7 +8,9 @@ import theme from "./theme";
 ReactDOM.render(
   <ThemeProvider theme={theme}>
     <CssBaseline/>
-    <App />
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
   </ThemeProvider>,
   document.getElementById('root')
 );
