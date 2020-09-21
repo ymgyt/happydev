@@ -1,8 +1,8 @@
-import React, {KeyboardEvent} from "react";
+import React, {KeyboardEvent} from 'react';
 import {connect} from 'react-redux';
-import InputBase from "@material-ui/core/InputBase";
-import {makeStyles} from '@material-ui/core/styles';
-import {fetchTasks} from '../../actions/taskAction';
+import InputBase from '@material-ui/core/InputBase';
+import { makeStyles } from '@material-ui/core/styles';
+import { fetchTasks } from '../../actions/taskAction';
 
 const useStyles = makeStyles((theme) => ({
   inputRoot: {

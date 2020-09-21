@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-use-before-define
 import React from 'react';
 import {
   ListItem,
@@ -25,7 +26,7 @@ export interface TaskProps {
 const Task: React.FC<any> = (props: TaskProps) => {
   const handleDelete = () => {
     props.onDeleteButtonClick(props.id);
-  }
+  };
   return (
     <ListItem divider={props.divider}>
       <Checkbox
@@ -33,14 +34,14 @@ const Task: React.FC<any> = (props: TaskProps) => {
         checked={props.checked}
         disableRipple={false}
       />
-      <ListItemText primary={props.title}/>
+      <ListItemText primary={props.title} />
       <ListItemSecondaryAction>
-        <IconButton aria-label='Delete Todo' onClick={handleDelete}>
-          <DeleteOutlined/>
+        <IconButton aria-label="Delete Todo" onClick={handleDelete}>
+          <DeleteOutlined />
         </IconButton>
       </ListItemSecondaryAction>
     </ListItem>
-  )
-}
+  );
+};
 
 export default Task;
