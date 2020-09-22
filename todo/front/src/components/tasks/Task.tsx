@@ -8,22 +8,23 @@ import {
   ListItemSecondaryAction,
 } from '@material-ui/core';
 import DeleteOutlined from '@material-ui/icons/DeleteOutlined';
+import { Link } from 'react-router-dom';
 
 export interface TaskProps {
   // data
-  id: string,
-  title: string,
-  category: string,
-  content: string,
+  id: string;
+  title: string;
+  category: string;
+  content: string;
 
   // ui
-  divider?: boolean,
-  checked?: boolean,
-  onDeleteButtonClick?: any,
-  onCheckBoxToggle?: any,
+  divider?: boolean;
+  checked?: boolean;
+  onDeleteButtonClick?: any;
+  onCheckBoxToggle?: any;
 }
 
-const Task: React.FC<any> = (props: TaskProps) => {
+const Task: React.FC<TaskProps> = (props: TaskProps) => {
   const handleDelete = () => {
     props.onDeleteButtonClick(props.id);
   };
@@ -34,7 +35,13 @@ const Task: React.FC<any> = (props: TaskProps) => {
         checked={props.checked}
         disableRipple={false}
       />
-      <ListItemText primary={props.title} />
+      <Link
+        to={{
+          pathname: `/tasks/${props.id}`,
+        }}
+      >
+        <ListItemText primary={props.title} />
+      </Link>
       <ListItemSecondaryAction>
         <IconButton aria-label="Delete Todo" onClick={handleDelete}>
           <DeleteOutlined />
