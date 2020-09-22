@@ -36,7 +36,14 @@ const AddTaskForm = (props: AddTaskFormProps) => {
       content: content,
     });
     closeAddTaskModal();
-  }
+  };
+
+  const inputRef = React.useRef<HTMLInputElement>();
+
+  // rendering後にfocusされた状態にしておく
+  React.useEffect(() => {
+    if (inputRef.current) inputRef.current.focus();
+  }, []);
 
   return (
     <Grid container direction='column' spacing={3}>
@@ -48,6 +55,7 @@ const AddTaskForm = (props: AddTaskFormProps) => {
           label='Title' id='title'
           className={classes.input}
           value={title}
+          inputRef={inputRef}
           onChange={(event) => setTitle(event.target.value)}
         />
       </Grid>

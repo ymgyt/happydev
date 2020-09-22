@@ -9,19 +9,20 @@ import AddTaskModal from './AddTaskModal';
 
 export interface TasksProps {
   taskState: {
-    tasks: TaskProps[]
-    loading: boolean,
-  }
-  fetchTasks: any,
-  openAddTaskModal: any,
-  deleteTask: any,
+    tasks: TaskProps[];
+    loading: boolean;
+  };
+  fetchTasks: any;
+  openAddTaskModal: any;
+  deleteTask: any;
 }
 
-const Tasks: React.FC<TasksProps> = (props: TasksProps) => {
-  const {
-    taskState: { tasks, loading }, fetchTasks, openAddTaskModal, deleteTask,
-  } = props;
-
+const Tasks: React.FC<TasksProps> = ({
+  taskState: { tasks, loading },
+  fetchTasks,
+  openAddTaskModal,
+  deleteTask,
+}) => {
   useEffect(() => {
     fetchTasks({ query: '', order: { key: 'created_at', asc: true } });
     // eslint-disable-next-line
@@ -36,7 +37,9 @@ const Tasks: React.FC<TasksProps> = (props: TasksProps) => {
   }
   return (
     <Paper style={{ margin: 16 }}>
-      {!loading && tasks.length === 0 ? (<p>no tasks</p>) : (
+      {!loading && tasks.length === 0 ? (
+        <p>no tasks</p>
+      ) : (
         <List style={{ overflow: 'scroll', padding: 0 }}>
           {tasks.map((task) => (
             <Task
@@ -58,7 +61,8 @@ const mapStateToProps = (state: any) => ({
   taskState: state.task,
 });
 
-export default connect(
-  mapStateToProps,
-  { fetchTasks, openAddTaskModal, deleteTask },
-)(Tasks);
+export default connect(mapStateToProps, {
+  fetchTasks,
+  openAddTaskModal,
+  deleteTask,
+})(Tasks);

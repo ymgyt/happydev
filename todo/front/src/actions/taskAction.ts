@@ -1,3 +1,4 @@
+import { ThunkAction, ThunkDispatch } from 'redux-thunk';
 import {
   FETCH_TASKS,
   SET_LOADING,
@@ -5,12 +6,17 @@ import {
   ADD_TASK,
   UNSET_LOADING,
   CLOSE_ADD_TASK_MODAL,
-  OPEN_ADD_TASK_MODAL, DELETE_TASK
+  OPEN_ADD_TASK_MODAL,
+  DELETE_TASK,
 } from './types';
-import TodoApi, {fetchTasksParam} from "../gateway/todoApi";
+import TodoApi, { fetchTasksParam } from '../gateway/todoApi';
 
 // fetch tasks from server
-export const fetchTasks = (param: fetchTasksParam) => async (dispatch: any) => {
+export const fetchTasks: (
+  param: fetchTasksParam,
+) => ThunkAction<Promise<void>, null, null, any> = (
+  param: fetchTasksParam,
+) => async (dispatch: ThunkDispatch<null, null, any>) => {
   try {
     // このあたりは前後の処理を抽象化してclosureわたすような感じで書きたい
     // withLoading(...)みたいな
@@ -20,13 +26,14 @@ export const fetchTasks = (param: fetchTasksParam) => async (dispatch: any) => {
 
     dispatch({
       type: FETCH_TASKS,
-      payload: data.tasks
+      payload: data.tasks,
     });
-  } catch (err) { // ここも共通化したい
+  } catch (err) {
+    // ここも共通化したい
     dispatch({
       type: API_ERROR,
-      payload: err.response
-    })
+      payload: err.response,
+    });
   }
 };
 
@@ -40,12 +47,12 @@ export const addTask = (task: any) => async (dispatch: any) => {
     dispatch({
       type: ADD_TASK,
       payload: data,
-    })
+    });
   } catch (err) {
     dispatch({
       type: API_ERROR,
-      payload: err.response
-    })
+      payload: err.response,
+    });
   }
 };
 
@@ -58,22 +65,26 @@ export const deleteTask = (taskId: string) => async (dispatch: any) => {
 
     // Note: APIにResponse<T, APIError>みたいな型きって処理を共通化したい
     if (!res.ok) {
-      throw new Error("NotOKErr")
+      throw new Error('NotOKErr');
     }
 
     dispatch({
       type: DELETE_TASK,
       payload: taskId,
-    })
+    });
   } catch (err) {
     dispatch({
       type: API_ERROR,
-      payload: err.response
-    })
+      payload: err.response,
+    });
   }
 };
 
-export const setLoading = async (dispatch: any) => dispatch({type: SET_LOADING})
-export const unsetLoading = async (dispatch: any) => dispatch({type: UNSET_LOADING})
-export const openAddTaskModal = () => async (dispatch: any) => dispatch({type: OPEN_ADD_TASK_MODAL})
-export const closeAddTaskModal = () => async (dispatch: any) => dispatch({type: CLOSE_ADD_TASK_MODAL})
+export const setLoading = async (dispatch: any) =>
+  dispatch({ type: SET_LOADING });
+export const unsetLoading = async (dispatch: any) =>
+  dispatch({ type: UNSET_LOADING });
+export const openAddTaskModal = () => async (dispatch: any) =>
+  dispatch({ type: OPEN_ADD_TASK_MODAL });
+export const closeAddTaskModal = () => async (dispatch: any) =>
+  dispatch({ type: CLOSE_ADD_TASK_MODAL });
